@@ -24,6 +24,8 @@ with open(file_list, 'r') as list:
             ht = base - wave.Waveform[minp]
             rst = minp  - st
             flt = ed - minp
+            maxp = base - np.max(pulse)
+            asy = ht / (ht + maxp)
             area = process_data.pusle_area(pulse, st, ed, base)
             area_fixlen = process_data.pulse_area_fix_len(pulse, st, 10, base)
             winfo.append({
@@ -36,9 +38,9 @@ with open(file_list, 'r') as list:
                 'Minp': minp,     ## min point
                 'Rst' : rst,      ## rise time of pulse    
                 'Flt' : flt,      ## full time of pulse  
-                'Area': area,
-                'AreaFixlen': area_fixlen,
-                #'AreaFixrange': area_fixrang,
+                'Asym' : asy,     ## asymmetry of pulse
+                'Area': area,     ## area of pulse cal by dynamic range
+                'AreaFixlen': area_fixlen,    ## area of pulse cal by fix length of 10
                 'Wave': pulse,
             })
             i +=1
