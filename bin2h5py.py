@@ -49,6 +49,6 @@ with open(file_list, 'r') as list:
             
         file_tag = line.rstrip('\n')[17 :].rstrip('.bin')[24:][: -13]  
         path_save = "outnpy/{}.h5".format(file_tag)
-
+print(path_save)
 df = pd.DataFrame(winfo)
 process_data.write_to_hdf5(df, path_save)
