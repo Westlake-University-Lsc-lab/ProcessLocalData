@@ -2,5 +2,5 @@ __pycache__
 .ipynb_checkpoints
 runlist
 outnpy
-raw2h5py.ipynb
+#raw2h5py.ipynb
 
