@@ -23,8 +23,8 @@ this repository is software to process DAW data from 1725 digitize borad and do 
 ####  the runlist/LED_1.7V_11ns_400_ratio_runs shows like this:
 ``` more runlist/LED_1.7V_11ns_400_ratio_runs ```
 
-``` 2024-08-21 14:49 /mnt/data/PMT/R8520_406/LV2415_anodereadout_LV2414_dualreadout_20240821_LED_1.7V_11ns_400_ratio_run0_raw_b0_seg0.bin ```
-``` 2024-08-21 15:03 /mnt/data/PMT/R8520_406/LV2415_anodereadout_LV2414_dualreadout_20240821_LED_1.7V_11ns_400_ratio_run1_raw_b0_seg0.bin ```
+`` 2024-08-21 14:49 /mnt/data/PMT/R8520_406/LV2415_anodereadout_LV2414_dualreadout_20240821_LED_1.7V_11ns_400_ratio_run0_raw_b0_seg0.bin ``
+`` 2024-08-21 15:03 /mnt/data/PMT/R8520_406/LV2415_anodereadout_LV2414_dualreadout_20240821_LED_1.7V_11ns_400_ratio_run1_raw_b0_seg0.bin ``
 
 #### then run the following command to process the data:
 ``` mkdir outnpy/ ```
@@ -34,5 +34,6 @@ this repository is software to process DAW data from 1725 digitize borad and do 
 #### the processed data will be saved in hdf5 format in the same directory which you have to run:
 ``` ls  outnpy/ ```
 ####  or you can also run ``` raw2h5py.ipynb ```to process the data in jupyter notebook.
+
 
 
