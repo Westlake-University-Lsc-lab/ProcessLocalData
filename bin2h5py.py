@@ -46,8 +46,18 @@ with open(file_list, 'r') as list:
             i +=1
             
         file_tag = line.rstrip('\n')[17 :].rstrip('.bin')[24:][: -13]  
-        path_save = "outnpy/{}.npy".format(file_tag)
+        path_save = "outnpy/{}.h5".format(file_tag)
 
 df = pd.DataFrame(winfo)
-np.save(path_save, df)
-print("Save to {}".format(path_save))
+
+def write_to_hdf5(df, filename):
+    start_time = time.time()
+    df.to_hdf(filename, key='winfo', mode='w', complib='blosc:blosclz', complevel=9)  
+    write_time = time.time() - start_time
+    file_size = os.path.getsize(filename)
+    print("h5 Write Time: {}:.2f s ".format(write_time))
+    print("h5 File Size: {}:.2f MB".format( file_size/(1024*1024)) )
+    print("Save to {}".format(path_save))
+    return write_time,  file_size
+
+write_to_hdf5(df, path_save)
