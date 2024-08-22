@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import daw_readout
+import time
+import os
 
 
 ### read data and clculate start, min, end index ###
@@ -48,4 +50,13 @@ def pulse_area_fix_len(
     area = baseline * fix_len - sum
     pe_fact  = (2./16384)*4.e-9/(50*1.6e-19)/1.e6  ## to PE
     return area*pe_fact
-    
+
+def write_to_hdf5(df, filename):
+    start_time = time.time()
+    df.to_hdf(filename, key='winfo', mode='w', complib='blosc:blosclz', complevel=9)  
+    write_time = time.time() - start_time
+    file_size = os.path.getsize(filename)
+    print("h5 Write Time: {}:.2f s ".format(write_time))
+    print("h5 File Size: {}:.2f MB".format( file_size/(1024*1024)) )
+    print("Save to {}".format(filename))
+    return write_time,  file_size
