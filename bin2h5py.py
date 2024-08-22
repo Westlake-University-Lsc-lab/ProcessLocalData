@@ -14,9 +14,7 @@ i=0
 with open(file_list, 'r') as list:
     for line in list:    
         rawfilename = line.rstrip('\n')[17 :] 
-        rawdata = daw_readout.DAWDemoWaveParser(rawfilename)
-        winfo =[]
-        i=0        
+        rawdata = daw_readout.DAWDemoWaveParser(rawfilename)     
         for wave in tqdm(rawdata) :
             ch = wave.Channel
             ttt = wave.Timestamp
