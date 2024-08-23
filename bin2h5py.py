@@ -13,6 +13,7 @@ file_list =  sys.argv[1]
 path_save =""
 winfo =[]
 i=0
+tmp = 229264
 with open(file_list, 'r') as list:
     for line in list:    
         rawfilename = line.rstrip('\n')[17 :] 
@@ -24,31 +25,22 @@ with open(file_list, 'r') as list:
             pulse = wave.Waveform
             st, minp, ed = process_data.pusle_index(pulse)
             ht = base - wave.Waveform[minp]
-            #rst = minp  - st
-            #flt = ed - minp
-            #maxp = base - np.max(pulse)
-            #asy = ht / (ht + maxp)
             area = process_data.pusle_area(pulse, st, ed, base)
-            area_fixlen = process_data.pulse_area_fix_len(pulse, st, 10, base)
             winfo.append({
-                'EvtID': i,
                 'Ch':ch,
                 'TTT':ttt,   ## Trigger time tag
                 'Baseline': base, 
                 'Hight': ht, 
-                'Width': ed -st,  ## pusle width
-                'Minp': minp,     ## min point
-                #'Rst' : rst,      ## rise time of pulse    
-                #'Flt' : flt,      ## full time of pulse  
-                #'Asym' : asy,     ## asymmetry of pulse
                 'Area': area,     ## area of pulse cal by dynamic range
-                'AreaFixlen': area_fixlen,    ## area of pulse cal by fix length of 10
-                'Wave': pulse,
+                #'Wave': pulse,
             })
-            i +=1
-            
+            if(ttt != tmp):
+                i += 1
+            tmp = ttt            
         file_tag = line.rstrip('\n')[17 :].rstrip('.bin')[24:][: -13]  
-        path_save = "outnpy/{}.h5".format(file_tag)
+        path_save = "outnpy/{}.npy".format(file_tag)
 print(path_save)
 df = pd.DataFrame(winfo)
-process_data.write_to_hdf5(df, path_save)
+data_array = df.values
+np.save(path_save, data_array)
+#process_data.write_to_hdf5(df, path_save)
