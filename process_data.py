@@ -28,6 +28,7 @@ def pusle_index(waveform_data):
     return start_index, min_index, end_index
 
 ### calculate area of puse with dynamic range ###
+pe_fact  = (2./16384)*4.e-9/(50*1.6e-19)/1.e6  ## to PE
 def pusle_area(
     waveform_data,
     st: 'int',
@@ -36,8 +37,8 @@ def pusle_area(
 ):
     sum = np.sum( waveform_data[st: ed])
     area = baseline  * (ed - st) - sum  ### adc
-    pe_fact  = (2./16384)*4.e-9/(50*1.6e-19)/1.e6  ## to PE
-    return area*pe_fact
+    return area
+    #return area*pe_fact
 
 ### calculate area of pulse with fixed width ###
 def pulse_area_fix_len(
