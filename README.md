@@ -30,10 +30,11 @@ this repository is software to process DAW data from 1725 digitize borad and do 
 ``` mkdir outnpy/ ```
 
 ``` python bin2h5py.py  runlist/LED_1.7V_11ns_400_ratio_runs  ```
-
+#####  still, there are some bugs need to be fixed, during saving the data to hdf5 format( bin2h5py.py )..
 #### the processed data will be saved in hdf5 format in the same directory which you have to run:
 ``` ls  outnpy/ ```
 ####  or you can also run ``` raw2h5py.ipynb ```to process the data in jupyter notebook.
 
-
+#### some data has been processed and saved in hdf5 format, you can found them here:
+``` ls /home/yjj/ProcessLocalData/outnpy/ ```
 
