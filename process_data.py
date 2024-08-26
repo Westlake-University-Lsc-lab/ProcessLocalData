@@ -57,7 +57,7 @@ def write_to_hdf5(df, filename):
     df.to_hdf(filename, key='winfo', mode='w', complib='blosc:blosclz', complevel=9)  
     write_time = time.time() - start_time
     file_size = os.path.getsize(filename)
-    print("h5 Write Time: {}:.2f s ".format(write_time))
-    print("h5 File Size: {}:.2f MB".format( file_size/(1024*1024)) )
+    print(r"h5 Write Time: {:.2f} s ".format(write_time))
+    print(r"h5 File Size: {:.2f} MB".format( file_size/(1024*1024)) )
     print("Save to {}".format(filename))
     return write_time,  file_size
