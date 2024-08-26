@@ -38,9 +38,9 @@ with open(file_list, 'r') as list:
                 i += 1
             tmp = ttt            
         file_tag = line.rstrip('\n')[17 :].rstrip('.bin')[24:][: -13]  
-        path_save = "outnpy/{}.npy".format(file_tag)
+        path_save = "outnpy/{}.h5py".format(file_tag)
 print(path_save)
 df = pd.DataFrame(winfo)
-data_array = df.values
-np.save(path_save, data_array)
-#process_data.write_to_hdf5(df, path_save)
+#data_array = df.values
+#np.save(path_save, data_array)
+process_data.write_to_hdf5(df, path_save)
