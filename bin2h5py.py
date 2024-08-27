@@ -25,18 +25,28 @@ with open(file_list, 'r') as list:
             st, minp, ed = process_data.pusle_index(pulse)
             ht = base - wave.Waveform[minp]
             area = process_data.pusle_area(pulse, st, ed, base)
+            area_fix_len = process_data.pulse_area_fix_len(pulse, minp, 15, base)
+            area_fix_range = process_data.pulse_area_fix_range(pulse, 95, 130, base)
             if ch == 0:
                 area_pe = area / 77.791
+                area_fix_len_pe = area_fix_len / 77.791
+                area_fix_range_pe = area_fix_range / 77.791
             if ch == 1:
                 area_pe = area / 96.99
+                area_fix_len_pe = area_fix_len / 96.99
+                area_fix_range_pe = area_fix_range / 96.99
             if ch == 2:
                 area_pe = area 
+                area_fix_len_pe = area_fix_len 
+                area_fix_range_pe = area_fix_range
             winfo.append({
                 'Ch':ch,
                 'TTT':ttt,   ## Trigger time tag
                 'Baseline': base, 
                 'Hight': ht, 
                 'Area': area_pe,     ## area of pulse cal by dynamic range
+                'Area_fixlen': area_fix_len_pe,  ## area of pulse cal by fix length 10
+                'Area_fixrange':area_fix_range_pe
                 #'Wave': pulse,
             })
         file_tag = line.rstrip('\n')[17 :].rstrip('.bin')[24:][: -12]  
