@@ -49,8 +49,18 @@ def pulse_area_fix_len(
 ):
     sum = np.sum( waveform_data[st: st + fix_len])
     area = baseline * fix_len - sum
-    pe_fact  = (2./16384)*4.e-9/(50*1.6e-19)/1.e6  ## to PE
-    return area*pe_fact
+    #pe_fact  = (2./16384)*4.e-9/(50*1.6e-19)/1.e6  ## to PE
+    return area
+
+def pulse_area_fix_range(
+    waveform_data,
+    left: 'int',
+    right: 'int',
+    baseline : 'int',        
+):
+    sum = np.sum( waveform_data[left: right])
+    area = baseline * (right - left) - sum
+    return area
 
 def write_to_hdf5(df, filename):
     start_time = time.time()
