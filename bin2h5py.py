@@ -27,6 +27,7 @@ with open(file_list, 'r') as list:
             area = process_data.pusle_area(pulse, st, ed, base)
             area_fix_len = process_data.pulse_area_fix_len(pulse, minp, 15, base)
             area_fix_range = process_data.pulse_area_fix_range(pulse, 95, 130, base)
+            area_fix_range_dy = process_data.pulse_area_fix_range(pulse, 90, 150, base)
             if ch == 0:
                 area_pe = area / 77.791
                 area_fix_len_pe = area_fix_len / 77.791
@@ -36,9 +37,9 @@ with open(file_list, 'r') as list:
                 area_fix_len_pe = area_fix_len / 96.99
                 area_fix_range_pe = area_fix_range / 96.99
             if ch == 2:
-                area_pe = area 
-                area_fix_len_pe = area_fix_len 
-                area_fix_range_pe = area_fix_range
+                area_pe = area / 77.791
+                area_fix_len_pe = area_fix_len / 77.791
+                area_fix_range_pe = area_fix_range_dy / 77.791 
             winfo.append({
                 'Ch':ch,
                 'TTT':ttt,   ## Trigger time tag
