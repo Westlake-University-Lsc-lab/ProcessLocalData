@@ -10,6 +10,7 @@ runlist
 outnpy/
 res/
 figs/
+fig/
 
 ### some software packages
 node_modules
