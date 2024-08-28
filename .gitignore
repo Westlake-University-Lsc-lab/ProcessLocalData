@@ -1,7 +1,21 @@
+
+### tmp files loading jpuyter notebook
 __pycache__
 .ipynb_checkpoints
+
+
+### some path to store data or output
+
 runlist
-outnpy
+outnpy/
 res/
+figs/
+
+### some software packages
+node_modules
+
+### json files
+*.json
+
 #raw2h5py.ipynb
 
