@@ -1,0 +1,20 @@
+# local git file
+.git
+.gitigore
+
+
+# local tmp files
+.ipynb_checkpoints
+__pycacje__
+
+# json files
+
+*.json
+
+
+# some path to store data or output
+outnpy/
+res/
+figs/
+runlist/
+
