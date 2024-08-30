@@ -2,6 +2,7 @@
 from landaupy import landau
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
     
 def landau_fit(xdata, location, scale, A):
     mu = location
@@ -37,3 +38,18 @@ def plot_waveform(wave, baseline, st, ed, lp, xmin=0, xmax=150, ttt=888, area=10
     plt.legend()
     plt.xlim(xmin, xmax)
     plt.show()
+    
+def plot_fit_histgram_vs_Gaussion(array, nbins, left_edge, right_edge, p0=[1.e4, 100, 10],file_tag='20240830_LED_run',xlabel='Ch0 Area', title='LED Ch0 Area' ):
+    hist, bins_edges = np.histogram(array, bins= nbins, range=(left_edge, right_edge))
+    bins = (bins_edges[:-1] + bins_edges[1:])/2
+    popt, _ = curve_fit(gaussian, bins, hist, p0=p0)
+    x_fit = np.linspace(np.min(bins), np.max(bins), 1000)
+    y_fit = gaussian(x_fit, *popt)
+    plt.plot(x_fit, y_fit, label=r'$\mu$={:.2f}, $\sigma$={:.2f}'.format(popt[1], popt[2]))
+    plt.hist(array, bins=nbins, range=(left_edge, right_edge),  color='black', density=False, alpha=0.5, label=xlabel)
+    plt.xlabel(r'{} [PE]'.format(xlabel))
+    plt.ylabel('Entries')
+    plt.title(r'{} {}'.format(file_tag, title))
+    plt.legend()
+    print(r'Fit: mu= {:.2f}, sigma ={:.2f}'.format(popt[1], popt[2]))
+    return popt[1], popt[2]
