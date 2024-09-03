@@ -47,7 +47,7 @@ def plot_fit_histgram_vs_Gaussion(array, nbins, left_edge, right_edge, p0=[1.e4,
     y_fit = gaussian(x_fit, *popt)
     plt.plot(x_fit, y_fit, label=r'$\mu$={:.2f}, $\sigma$={:.2f}'.format(popt[1], popt[2]))
     plt.hist(array, bins=nbins, range=(left_edge, right_edge),  color='black', density=False, alpha=0.5, label=xlabel)
-    plt.xlabel(r'{} [PE]'.format(xlabel))
+    plt.xlabel(r'{} '.format(xlabel))
     plt.ylabel('Entries')
     plt.title(r'{} {}'.format(file_tag, title))
     plt.legend()
