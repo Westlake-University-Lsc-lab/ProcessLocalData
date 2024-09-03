@@ -55,7 +55,7 @@ def pusle_index(waveform_data):
 
 ### calculate area of puse with dynamic range ###
 pe_fact  = (2./16384)*4.e-9/(50*1.6e-19)/1.e6  ## to PE
-def pusle_area(
+def pulse_area(
     waveform_data,
     st: 'int',
     ed: 'int',
