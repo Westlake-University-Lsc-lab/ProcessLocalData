@@ -39,7 +39,7 @@ def plot_waveform(wave, baseline, st, ed, lp, xmin=0, xmax=150, ttt=888, area=10
     plt.xlim(xmin, xmax)
     plt.show()
     
-def plot_fit_histgram_vs_Gaussion(array, nbins, left_edge, right_edge, p0=[1.e4, 100, 10],file_tag='20240830_LED_run',xlabel='Ch0 Area', title='LED Ch0 Area' ):
+def plot_fit_histgram_vs_Gaussion(array, nbins, left_edge, right_edge, p0=[1.e4, 100, 10],file_tag='20240830_LED_run',xlabel='Ch0 Area', title='LED Ch0 Area', Save=False):
     hist, bins_edges = np.histogram(array, bins= nbins, range=(left_edge, right_edge))
     bins = (bins_edges[:-1] + bins_edges[1:])/2
     popt, _ = curve_fit(gaussian, bins, hist, p0=p0)
@@ -51,5 +51,18 @@ def plot_fit_histgram_vs_Gaussion(array, nbins, left_edge, right_edge, p0=[1.e4,
     plt.ylabel('Entries')
     plt.title(r'{} {}'.format(file_tag, title))
     plt.legend()
+    if Save==True:
+        plt.savefig(r'./figs/{}_{}.png'.format(file_tag, title,dpi=300))
+    elif Save==False:
+        plt.show()
     print(r'Fit: mu= {:.2f}, sigma ={:.2f}'.format(popt[1], popt[2]))
     return popt[1], popt[2]
+
+
+def landau_distribution(xdata, mu,sigma, A):
+    landau = lambda t, mu, sigma, xdata, A : A*np.exp(-t)*np.cos(t*(xdata -mu)/sigma + 2*t/np.pi *np.log(t/sigma) ) / (sigma *  np.pi)
+    integral, error = integrate.quad(landau, 0, np.inf, args=(mu,sigma,xdata, A))
+    return integral
+
+def landau_distribution_array(xdata,mu, sigma, A):
+    return np.array([landau_distribution(x, mu,sigma, A) for x in xdata])
