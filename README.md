@@ -11,23 +11,21 @@ git checkout your_branch_name
 ```
 
 #### to process data files from mulit runs(LED runs for example), run the following command in terminal:
-
 ```
 ls -lrth --time-style=+%Y-%m-%d\ %H:%M /mnt/data/PMT/R8520_406/LV2415_anodereadout_LV2414_dualreadout_20240821_LED_1.7V_11ns_400_ratio_run* >> runlist/LED_1.7V_11ns_400_ratio_runs
+
 ```
-<br>
 #### you need to edit the runlist/LED\_1.7V\_11ns\_400\_ratio\_runs file with:
-<br>
+
 ```
 vim runlist/LED_1.7V_11ns_400_ratio_runs
 ctl+v
 -> right arrow till 'MB', and leave the 'year-month-day-hour-minute
 :wq!
 ```
-<br>
-<br>
+
 #### the `runlist/LED_1.7V_11ns_400_ratio_runs`shows like this:
-<br>
+
 ```
 more runlist/LED_1.7V_11ns_400_ratio_runs
 2024-08-21 14:49 /mnt/data/PMT/R8520_406/LV2415_anodereadout_LV2414_dualreadout_20240821_LED_1.7V_11ns_400_ratio_run0_raw_b0_seg0.bin
@@ -35,10 +33,10 @@ more runlist/LED_1.7V_11ns_400_ratio_runs
 ```
 
 #### then run the following command to process the data:
-<br>
 ```
 mkdir outnpy/
 python bin2h5py.py runlist/LED_1.7V_11ns_400_ratio_runs
+
 ```
 
 ##### still, there are some bugs need to be fixed, during saving the data to hdf5 format( bin2h5py.py )..
