@@ -38,11 +38,11 @@ with open(file_list, 'r') as list:
                 'Hight': ht, 
                 'Area_fixrange':area_fix_range_pe,
             })
-        #file_tag = line.rstrip('\n')[17 :].rstrip('.bin')[24:][: -12]  
-        file_tag = line.rstrip('\n').rstrip('.bin')[24:][: -12]  
-        path_save = "outnpy/{}.h5py".format(file_tag)
-        df = pd.DataFrame(winfo)
-        process_data.write_to_hdf5(df, path_save)
+    #file_tag = line.rstrip('\n')[17 :].rstrip('.bin')[24:][: -12]  
+    file_tag = line.rstrip('\n').rstrip('.bin')[24:][: -12]  
+    path_save = "outnpy/{}.h5py".format(file_tag)
+    df = pd.DataFrame(winfo)
+    process_data.write_to_hdf5(df, path_save)
 #print(path_save)
 #data_array = df.values
 #np.save(path_save, data_array)
