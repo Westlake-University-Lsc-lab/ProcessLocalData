@@ -35,7 +35,7 @@ with open(file_list, 'r') as list:
             #area_fix_range_dy = process_data.pulse_area_fix_range(pulse, 90, 300, base)
             if ch == 0:  ### LV2414 Anode
                 ht = ht * attenuation_factor_9DB
-                area_fix_range_pe = area_fix_range / (gain_lv2414 *attenuation_factor_9DB)
+                area_fix_range_pe = area_fix_range / gain_lv2414 *attenuation_factor_9DB
             if ch == 1:
                 area_fix_range_pe = area_fix_range / gain_lv2415
                 area_fix_range_pe = area_fix_range / gain_lv2415
