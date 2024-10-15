@@ -66,3 +66,15 @@ def landau_distribution(xdata, mu,sigma, A):
 
 def landau_distribution_array(xdata,mu, sigma, A):
     return np.array([landau_distribution(x, mu,sigma, A) for x in xdata])
+
+
+def exponential_decay(t, N0, lambda_):
+    return  N0* np.exp(-lambda_ * t)
+def fit_decay_data(time_data, count_data):
+    # Initial guess for the parameters N0 and lambda
+    initial_guess = [7600, 0.2]
+    
+    # Curve fitting
+    popt, pcov = curve_fit(exponential_decay, time_data, count_data, p0=initial_guess)    
+    N0, lambda_ = popt
+    return N0, lambda_, pcov
