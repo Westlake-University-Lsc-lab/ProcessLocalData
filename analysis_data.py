@@ -29,9 +29,9 @@ def plot_waveform(wave, baseline, st, ed, lp, xmin=0, xmax=150, ttt=888, area=10
     plt.step(np.arange(len(wave)), wave, where='mid')
     plt.axhline(y=baseline, color='b', linestyle='--', label='Baseline')  # 基线
     plt.axhline(y=baseline -20, color='r', linestyle='--', label='Threshold')  # 阈值
-    plt.scatter(st, wave[st], color='r', marker='o', label='start')  # 起始点
-    plt.scatter(ed, wave[ed], color='g', marker='o', label='end')  # 结束点
-    plt.scatter(lp, wave[lp], color='b', marker='o', label='minpoint')  # 最低点
+    # plt.scatter(st, wave[st], color='r', marker='o', label='start')  # 起始点
+    # plt.scatter(ed, wave[ed], color='g', marker='o', label='end')  # 结束点
+    # plt.scatter(lp, wave[lp], color='b', marker='o', label='minpoint')  # 最低点
     plt.title(r'Waveform of PMT {} {}, TTT={}, {:.2f}PE'.format(pmt,ch, ttt, area))
     plt.xlabel('Time [4 ns]')
     plt.ylabel('ADC Count')
