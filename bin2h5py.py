@@ -29,28 +29,43 @@ with open(file_list, 'r') as list:
             ttt = wave.Timestamp
             base = wave.Baseline
             pulse = wave.Waveform
-            st, minp, ed = process_data.pusle_index(pulse)
-            ht = base - wave.Waveform[minp]
-            area_fix_range = process_data.pulse_area_fix_range(pulse, 90, 3000, base)
-            #area_fix_range_dy = process_data.pulse_area_fix_range(pulse, 90, 300, base)
-            if ch == 0:  ### LV2414 Anode
-                ht = ht * attenuation_factor_9DB
-                area_fix_range_pe = area_fix_range / gain_lv2414 *attenuation_factor_9DB
+            # st, minp, ed = process_data.pusle_index(pulse)
+            # ht = base - wave.Waveform[minp]
+            # area_s1 = process_data.pulse_area_fix_range(pulse, 50, 300, base)
+            # area_s2 = process_data.pulse_area_fix_range(pulse, 1250, 1750, base)    ### 5us
+            # area_s2 = process_data.pulse_area_fix_range(pulse, 2500, 3000, base)   ### 10us
+            # area_s2 = process_data.pulse_area_fix_range(pulse, 7500, 8000, base)    ### 30us
+            # area_s2 = process_data.pulse_area_fix_range(pulse, 22500,23000, base)    ### 90us
+            # area_s2 = process_data.pulse_area_fix_range(pulse, 50000,50800, base)   ### 200us
+            area = process_data.pulse_area_fix_range(pulse, 80, 380, base)
+            if ch == 0:
+                area = area / gain_lv2414 *attenuation_factor_12DB
+                # area_S1 = area_s1 / gain_lv2414 *attenuation_factor_12DB
+                # area_S2 = area_s2 / gain_lv2414 *attenuation_factor_12DB
             if ch == 1:
-                area_fix_range_pe = area_fix_range / gain_lv2415
-                area_fix_range_pe = area_fix_range / gain_lv2415
-            if ch == 2:   #### LV2414 Dynode
-                area_fix_range_pe = area_fix_range / gain_lv2414
-            winfo.append({
+                area = area / gain_lv2415 * attenuation_factor_6DB
+                # area_S1 = area_s1 / gain_lv2415 *attenuation_factor_6DB
+                # area_S2 = area_s2 / gain_lv2415 *attenuation_factor_6DB
+            if ch == 2:
+                area = area / gain_lv2414
+                # area_S1 = area_s1 / gain_lv2414 
+                # area_S2 = area_s2 / gain_lv2414 
+            winfo.append({         
                 'Ch':ch,
                 'TTT':ttt,   ## Trigger time tag
                 'Baseline': base, 
-                'Hight': ht, 
-                'Area_fixrange':area_fix_range_pe,
+                # 'Area_S1':area_S1,
+                # 'Area_S2':area_S2,
+                'Area_S2':area,
+                # 'S1_width':152, #ns
+                'S2_width':920, #ns  5us, 90us, 200us
+                # 'S2_width':1070, #ns  10us
+                # 'S2_width':1080, #ns  30us
+                # 'Delta_t': 200, #us
                 'Wave': pulse
-            })
+            })    
         #file_tag = line.rstrip('\n')[17 :].rstrip('.bin')[24:][: -12]  
-        file_tag = line.rstrip('\n').rstrip('.bin')[24:][: -12]  
+        file_tag = line.rstrip('\n').rstrip('.bin')[24:][:]  
         path_save = "outnpy/{}.h5py".format(file_tag)
         df = pd.DataFrame(winfo)
         process_data.write_to_hdf5(df, path_save)
