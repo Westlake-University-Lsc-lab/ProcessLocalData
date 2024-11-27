@@ -24,7 +24,7 @@ def load_runlist_to_numpy(runlist_path):
     runlist = [run.strip() for run in runlist]
     return np.array(runlist)
 
-def plot_waveform(wave, baseline, st, ed, lp, xmin=0, xmax=150, ttt=888, area=100, pmt='LV2414',  ch='Anode'):
+def plot_waveform(wave, baseline, st, ed, lp, xmin=0, xmax=150, ttt=888, area=100, pmt='LV2414',  ch='Anode', Save=False, file_tag='20240830_LED_run', title='LED Ch0 Waveform'):
     plt.figure()
     plt.step(np.arange(len(wave)), wave, where='mid')
     plt.axhline(y=baseline, color='b', linestyle='--', label='Baseline')  # 基线
@@ -37,7 +37,11 @@ def plot_waveform(wave, baseline, st, ed, lp, xmin=0, xmax=150, ttt=888, area=10
     plt.ylabel('ADC Count')
     plt.legend()
     plt.xlim(xmin, xmax)
-    plt.show()
+    if Save==True:
+        plt.savefig(r'./figs/{}_{}.png'.format(file_tag, title,dpi=300))
+    elif Save==False:
+        plt.show()
+    # plt.show()
     
 def plot_fit_histgram_vs_Gaussion(array, nbins, left_edge, right_edge, p0=[1.e4, 100, 10],file_tag='20240830_LED_run',xlabel='Ch0 Area', title='LED Ch0 Area', Save=False):
     hist, bins_edges = np.histogram(array, bins= nbins, range=(left_edge, right_edge))
@@ -78,3 +82,62 @@ def fit_decay_data(time_data, count_data):
     popt, pcov = curve_fit(exponential_decay, time_data, count_data, p0=initial_guess)    
     N0, lambda_ = popt
     return N0, lambda_, pcov
+
+
+def find_threshold_points(waveform, baseline, threshold, negative_pulse=True, start_index=0, end_index=0):
+    threshold_points = []
+    for i in range(start_index, len(waveform[:end_index])):
+        if negative_pulse:
+            if waveform[i] < baseline -threshold:
+                threshold_points.append(i)
+        else:
+            if waveform[i] > baseline +threshold:
+                threshold_points.append(i)    
+    st = threshold_points[0]
+    ed = threshold_points[-1]
+    return st, ed
+
+
+def calculate_wf_mean_std(file, threshold=100, start_index=1000, Channel='Anode'):  
+    import pandas as pd
+    import glob
+    #####################################################################
+    #### load all data by DataFrame format          #####################
+    #####################################################################
+    h5_files_pattern = r'{}*.h5py'.format(file.split('raw_')[0])
+    print(h5_files_pattern)
+    h5_files = glob.glob(h5_files_pattern)
+    df = pd.DataFrame()  #### comine all data
+    for files in h5_files:
+        _df = pd.read_hdf(files, key='winfo')
+        df = pd.concat([df, _df], ignore_index=True)
+    ######################################################################
+    #### select Ch==0, first Anode waveform to calculate st,ed index #####
+    ######################################################################
+    index = None 
+    for i in range(3):
+        if df.Ch[i] != 0:
+            continue
+        else:
+            index = i
+        index = i  
+    if 'Wave' not in df.columns:
+        raise ValueError("The DataFrame does not contain a 'Wave' column.")        
+    st, ed = find_threshold_points(df.Wave[:][index], df.Baseline[:][index], negative_pulse=True, threshold=threshold, start_index=start_index, end_index=len(df.Wave[:][index]) )
+    #########################################################################
+    #### Calculate wf mean and std for selected Channel, anode or dynode ####
+    #########################################################################
+    if Channel == 'Anode':
+        ch_selec = df.Ch == 0
+    elif Channel == 'Dynode':
+        ch_selec = df.Ch == 2
+    df = df[ch_selec]
+    wave_array = df['Wave'].values 
+    data_array = np.zeros((len(wave_array), len(wave_array[0])))
+    for i in range(len(wave_array)):
+        for j in range(len(wave_array[0])):
+            data_array[i][j] = wave_array[i][j]        
+    mean_array = np.mean(data_array, axis=0)
+    std_array = np.std(data_array, axis=0)
+    data_array = None
+    return mean_array[st-50:ed+50], std_array[st-50:ed+50]
