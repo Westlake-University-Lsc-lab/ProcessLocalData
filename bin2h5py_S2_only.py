@@ -40,23 +40,13 @@ with open(file_list, 'r') as list:
                     base = base_l20
                 # print(r'this ch={}, baseline:{}, base_l20:{}'.format(ch, base, base_l20))                  
             pulse = wave.Waveform
-            # st, minp, ed = process_data.pusle_index(pulse)
-            # ht = base - wave.Waveform[minp]
-            # area_s1 = process_data.pulse_area_fix_range(pulse, 50, 300, base)
-            # area_s2 = process_data.pulse_area_fix_range(pulse, 1250, 1750, base)    ### 5us
             area = process_data.pulse_area_fix_range(pulse, 100, 370, base)
             if ch == 0:
                 area = area / gain_lv2414 *attenuation_factor_12DB
-                # area_S1 = area_s1 / gain_lv2414 *attenuation_factor_12DB
-                # area_S2 = area_s2 / gain_lv2414 *attenuation_factor_12DB
             if ch == 1:
                 area = area / gain_lv2415 * attenuation_factor_6DB
-                # area_S1 = area_s1 / gain_lv2415 *attenuation_factor_6DB
-                # area_S2 = area_s2 / gain_lv2415 *attenuation_factor_6DB
             if ch == 2:
                 area = area / gain_lv2414
-                # area_S1 = area_s1 / gain_lv2414 
-                # area_S2 = area_s2 / gain_lv2414 
             winfo.append({         
                 'Ch':ch,
                 'TTT':ttt,   
@@ -74,9 +64,6 @@ with open(file_list, 'r') as list:
         processed_list.append(path_save)
         df = pd.DataFrame(winfo)
         process_data.write_to_hdf5(df, path_save)
-#print(path_save)
-#data_array = df.values
-#np.save(path_save, data_array)
 
 fited_file=file_list+'_fit'
 with open(fited_file, 'w') as f:
