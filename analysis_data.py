@@ -236,3 +236,47 @@ def calculate_wf_mean_std_s2(file, threshold=100,  Channel='Anode'):
     std_array = np.std(data_array, axis=0)
     data_array = None
     return mean_array[50:400], std_array[50:400]
+
+def calculate_fullwf_mean_std(file, threshold=100,  Channel='Anode'):  
+    import pandas as pd
+    import glob
+    #####################################################################
+    #### load all data by DataFrame format          #####################
+    #####################################################################
+    h5_files_pattern = r'{}*.h5py'.format(file.split('raw_')[0])
+    print(h5_files_pattern)
+    h5_files = glob.glob(h5_files_pattern)
+    df = pd.DataFrame()  #### comine all data
+    for files in h5_files:
+        _df = pd.read_hdf(files, key='winfo')
+        df = pd.concat([df, _df], ignore_index=True)
+    ######################################################################
+    #### select Ch==0, first Anode waveform to calculate st,ed index #####
+    ######################################################################
+    index = None 
+    for i in range(3):
+        if df.Ch[i] != 0:
+            continue
+        else:
+            index = i
+        index = i  
+    if 'Wave' not in df.columns:
+        raise ValueError("The DataFrame does not contain a 'Wave' column.")        
+    # st, ed = find_threshold_points(df.Wave[:][index], df.Baseline[:][index], negative_pulse=True, threshold=threshold, start_index=start_index, end_index=len(df.Wave[:][index]) )
+    #########################################################################
+    #### Calculate wf mean and std for selected Channel, anode or dynode ####
+    #########################################################################
+    if Channel == 'Anode':
+        ch_selec = df.Ch == 0
+    elif Channel == 'Dynode':
+        ch_selec = df.Ch == 2
+    df = df[ch_selec]
+    wave_array = df['Wave'].values 
+    data_array = np.zeros((len(wave_array), len(wave_array[0])))
+    for i in range(len(wave_array)):
+        for j in range(len(wave_array[0])):
+            data_array[i][j] = wave_array[i][j]        
+    mean_array = np.mean(data_array, axis=0)
+    std_array = np.std(data_array, axis=0)
+    data_array = None
+    return mean_array, std_array
