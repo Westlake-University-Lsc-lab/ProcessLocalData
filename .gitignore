@@ -23,3 +23,8 @@ node_modules
 ### some tmp files
 
 *~
+
+relics.mplstyle
+common_setup.py
+
+*.tar.gz
