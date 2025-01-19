@@ -72,10 +72,12 @@ def process(rawfilename):
             'Wave': pulse,            
         })
     file_tag = run_info['file_tag']
+    print(file_tag)
     path_save = "outnpy/{}.h5py".format(file_tag)
-    processed_list.append(path_save)
     df = pd.DataFrame(winfo)
-    process_data.write_to_hdf5(df, path_save)    
+    process_data.write_to_hdf5(df, path_save)  
+    print(path_save)
+    return   path_save
 
 def main():
     try:
@@ -94,9 +96,16 @@ def main():
         print("Arguments parsed successfully.")
         
         flist = read_file_names(file_list)
+        processed_list = [] 
         for rawfilename in flist:        
-            process(rawfilename)
-        print("Processed files: ", flist)
+            processed_file = process(rawfilename)
+            processed_list.append(processed_file)            
+        print("Processed files saved to: ", processed_list)
+        output_file = file_list + '_processed'
+        with open(output_file, 'w') as file:
+            for filename in processed_list:
+                file.write(filename+'\n')
+        
     except Exception as e:
         print("An error occurred while parsing arguments:", str(e))
         print("Usagee: python bin2h5df.py --runtype Saturation/TimeConstant --file_list file_list.txt")
