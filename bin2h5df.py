@@ -83,15 +83,23 @@ def main():
         parser.add_argument('--runtype', type=str, help='TimeConstant or Calibration or Saturation')
         parser.add_argument('--file_list', type=str, help='file list')
         args = parser.parse_args()
+        if len(vars(args)) != 2:
+            raise Exception("Invalid number of arguments.")
+            print("Usagee: python bin2h5df.py --runtype Saturation/TimeConstant --file_list file_list.txt")
+        if args.runtype not in ["TimeConstant", "Calibration", "Saturation"]:
+            raise Exception("Invalid runtype.")
+        
         runtype = args.runtype
         file_list = args.file_list
+        print("Arguments parsed successfully.")
         
         flist = read_file_names(file_list)
         for rawfilename in flist:        
             process(rawfilename)
-        print("Processed files: ", processed_list)
+        print("Processed files: ", flist)
     except Exception as e:
-        print(f"Error: {e}")
+        print("An error occurred while parsing arguments:", str(e))
+        print("Usagee: python bin2h5df.py --runtype Saturation/TimeConstant --file_list file_list.txt")
         sys.exit(1)
 
 
