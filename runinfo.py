@@ -41,6 +41,10 @@ def find_run_tag(s, runtype):
     run_tag = s.split('Hz_')[1].split('_run')[0]
     return run_tag
 
+def find_file_tag(s, runtype):
+    file_tag = s.split('/mnt/data/PMT/R8520_406/')[1].split('.bin')[0]
+    return file_tag
+
 def find_voltage(s, runtype):
     date = find_date(s)
     if runtype == 'Saturation':
@@ -71,13 +75,14 @@ def parse_run_info(rawfilename):
         delta_t = 5
     trig_rate = find_trig_rate(rawfilename, runtype)
     run_tag = find_run_tag(rawfilename, runtype)
+    file_tag = find_file_tag(rawfilename, runtype)
     run_info = [{
         'date': date,
         'voltage': volate,
         'delta_t': delta_t,
         'trig_rate': trig_rate,
         'run_tag': run_tag,
-        'file_tag': rawfilename[:-len('.bin')]
+        'file_tag': file_tag
     }]
     return run_info
  
