@@ -23,6 +23,8 @@ def fit_spectrum(flist):
                 'S2_width': df.S2_width.values[0],
                 'S1_width': df.S1_width.values[0],
                 'Delta_t': df.Delta_t.values[0],
+                'Voltage': df.Voltage.values[0],
+                'RunTag': df.RunTag.values[0],
                 'ftag': f_tag,   
                 'Ch0_s2_sigma' : Ch0_s2_sigma,
                 'Ch1_s2_sigma' : Ch1_s2_sigma,
@@ -31,13 +33,16 @@ def fit_spectrum(flist):
     return run_info, f_tag
 
 def main():
+   
     try:
         parser = argparse.ArgumentParser(description='fit spectrum with gaussian model')
         parser.add_argument('--file_list', type=str, help='file list')
         args = parser.parse_args()
-        if len(vars(args)) != 1:
-            raise Exception("Invalid number of arguments.")
+ 
+        if not args.file_list:
+            print("Please provide file_list")
             print("Usagee: python guassainfitspectrum.py.py --file_list file_list.txt")
+            return
        
         file_list = args.file_list
         run_info, f_tag = fit_spectrum(file_list)        
