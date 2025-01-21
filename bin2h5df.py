@@ -29,8 +29,8 @@ def read_file_names(file_list_path):
             flist.append(rawfilename)  
     return flist
 
-def process(rawfilename):
-    runtype = runinfo.determine_runtype(rawfilename)    
+def process(rawfilename, runtype):
+    # runtype = runinfo.determine_runtype(rawfilename)    
     file_run_info = runinfo.parse_run_info(rawfilename)
     run_info = file_run_info[0]        
     # raw_file_info = RunInfo(runtype, file_run_info)
@@ -102,7 +102,7 @@ def main():
         flist = read_file_names(file_list)
         processed_list = [] 
         for rawfilename in flist:        
-            processed_file = process(rawfilename)
+            processed_file = process(rawfilename, runtype)
             processed_list.append(processed_file)            
         output_file = file_list + '_processed'
         with open(output_file, 'w') as file:
