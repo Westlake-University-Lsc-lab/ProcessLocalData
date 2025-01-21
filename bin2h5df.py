@@ -4,7 +4,7 @@ import runinfo as runinfo
 import pandas as pd
 from tqdm import tqdm
 import sys
-import time
+# import time
 import argparse
 import constant as c
 gain_2414 = c.gain_lv2414 
@@ -14,6 +14,8 @@ atten_6DB = c.attenuation_factor_6DB
 atten_12DB = c.attenuation_factor_12DB 
 atten_18DB = c.attenuation_factor_18DB 
 atten_20DB = c.attenuation_factor_20DB 
+atten_0DB = 1.0
+
 class RunInfo:
     def __init__(self, run_type, run_info):
         self.run_type = run_type
@@ -45,6 +47,8 @@ def process(rawfilename):
                 area = area / gain_2414 *atten_20DB
             elif runtype == "Saturation":
                 area = area / gain_2414 *atten_9DB
+            elif runtype == "LongS2":
+                area = area / gain_2414 *atten_0DB            
             else:
                 print("Attention: Unknown runtype, use default gain and attenuation factor 9DB")
                 area = area / gain_2414 *atten_9DB
@@ -53,6 +57,8 @@ def process(rawfilename):
                 area = area / gain_2415 *atten_9DB
             elif runtype == "Saturation":
                 area = area / gain_2415 
+            elif runtype == "LongS2":
+              area = area / gain_2415*atten_0DB 
             else:
                 print("Attention: Unknown runtype, use default gain and attenuation factor 0DB")
                 area = area / gain_2415         
@@ -87,10 +93,8 @@ def main():
         args = parser.parse_args()
         if len(vars(args)) != 2:
             raise Exception("Invalid number of arguments.")
-            print("Usagee: python bin2h5df.py --runtype Saturation/TimeConstant --file_list file_list.txt")
         if args.runtype not in ["TimeConstant", "Calibration", "Saturation"]:
             raise Exception("Invalid runtype.")
-        
         runtype = args.runtype
         file_list = args.file_list
         print("Arguments parsed successfully.")
@@ -100,11 +104,11 @@ def main():
         for rawfilename in flist:        
             processed_file = process(rawfilename)
             processed_list.append(processed_file)            
-        print("Processed files saved to: ", processed_list)
         output_file = file_list + '_processed'
         with open(output_file, 'w') as file:
             for filename in processed_list:
                 file.write(filename+'\n')
+        print("Processed files saved to: ", output_file)
         
     except Exception as e:
         print("An error occurred while parsing arguments:", str(e))
