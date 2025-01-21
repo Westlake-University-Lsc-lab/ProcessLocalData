@@ -95,10 +95,10 @@ def main():
         parser.add_argument('--file_list', type=str, help='file list name need to scale')
         args = parser.parse_args()
         
-        if not args.runtype :
+        if not args.runtype:
             print("Please provide runtype")
-            print("Usagee: python sacle2PEns.py --runtype Saturation --file outnpy/*_single_gussain.h5py  or \
-                  python sacle2PEns.py --runtype TimeConstant --file_list file_list")
+            print("Usagee: python sacle2PEns.py --runtype Saturation --file outnpy/*_single_gussain.h5py  or ")
+            print("Usagee: python sacle2PEns.py --runtype TimeConstant --file_list file_list")
             return
         
         if args.runtype == 'Saturation':
@@ -114,3 +114,6 @@ def main():
     except Exception as e:    
         print(e)
         sys.exit(1)
+        
+if __name__ == '__main__':
+    main()
