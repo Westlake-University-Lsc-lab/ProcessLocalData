@@ -13,22 +13,22 @@ def fit_spectrum(flist):
             file = line.rstrip('\n')
             f_tag = fit_package.ftag(file)
             df = pd.read_hdf(file, key='winfo')                
-            Ch0_s2_mu,Ch0_s2_sigma = fit_package.fit_single_channel(df, 0, f_tag)               
-            Ch1_s2_mu,Ch1_s2_sigma = fit_package.fit_single_channel(df, 1, f_tag)
-            Ch2_s2_mu,Ch2_s2_sigma = fit_package.fit_single_channel(df, 2, f_tag)
-            run_info.append({
-                'Ch0_s2_mu': Ch0_s2_mu,
-                'Ch1_s2_mu': Ch1_s2_mu,
-                'Ch2_s2_mu': Ch2_s2_mu,  
+            Ch0_mu,Ch0_sigma = fit_package.fit_single_channel(df, 0, f_tag)               
+            Ch1_mu,Ch1_sigma = fit_package.fit_single_channel(df, 1, f_tag)
+            Ch2_mu,Ch2_sigma = fit_package.fit_single_channel(df, 2, f_tag)
+            run_info.append({               
                 'S2_width': df.S2_width.values[0],
                 'S1_width': df.S1_width.values[0],
                 'Delta_t': df.Delta_t.values[0],
                 'Voltage': df.Voltage.values[0],
                 'RunTag': df.RunTag.values[0],
                 'ftag': f_tag,   
-                'Ch0_s2_sigma' : Ch0_s2_sigma,
-                'Ch1_s2_sigma' : Ch1_s2_sigma,
-                'Ch2_s2_sigma' : Ch2_s2_sigma,         
+                'Ch0_mu': Ch0_mu,
+                'Ch1_mu': Ch1_mu,
+                'Ch2_mu': Ch2_mu,
+                'Ch0_sigma' : Ch0_sigma,
+                'Ch1_sigma' : Ch1_sigma,
+                'Ch2_sigma' : Ch2_sigma,         
             })        
     return run_info, f_tag
 
