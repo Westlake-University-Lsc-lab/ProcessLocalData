@@ -1,5 +1,6 @@
 import os
 import runinfo
+import argparse
 
 def main():
     parser = argparse.ArgumentParser(description='Modify file name')
