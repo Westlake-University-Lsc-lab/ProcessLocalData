@@ -30,8 +30,11 @@ def read_file_names(file_list_path):
     return flist
 
 def process(rawfilename, runtype):
-    # runtype = runinfo.determine_runtype(rawfilename)    
-    file_run_info = runinfo.parse_run_info(rawfilename)
+    runtype_ = runinfo.determine_runtype(rawfilename)   
+    if runtype !=  runtype_:
+        print("Attention: runtype in file name does not match the specified runtype.")
+        sys.exit(1)
+    file_run_info = runinfo.parse_run_info(rawfilename, runtype)
     run_info = file_run_info[0]        
     # raw_file_info = RunInfo(runtype, file_run_info)
     winfo =[]        
@@ -44,7 +47,8 @@ def process(rawfilename, runtype):
         area = process_data.pulse_area_fix_range(pulse, 50, 370, base)
         if ch == 0 :
             if runtype == "TimeConstant":
-                area = area / gain_2414 *atten_20DB
+                # area = area / gain_2414 *atten_20DB
+                area = area / gain_2414 
             elif runtype == "Saturation":
                 area = area / gain_2414 *atten_9DB
             elif runtype == "LongS2":
@@ -54,7 +58,8 @@ def process(rawfilename, runtype):
                 area = area / gain_2414 *atten_9DB
         elif ch == 1 :
             if runtype == "TimeConstant":
-                area = area / gain_2415 *atten_9DB
+                #area = area / gain_2415 *atten_9DB
+                area = area / gain_2415
             elif runtype == "Saturation":
                 area = area / gain_2415 
             elif runtype == "LongS2":
@@ -88,12 +93,12 @@ def process(rawfilename, runtype):
 def main():
     try:
         parser = argparse.ArgumentParser(description='Process raw data to hdf5 format')
-        parser.add_argument('--runtype', type=str, help='TimeConstant or Calibration or Saturation')
+        parser.add_argument('--runtype', type=str, help='TimeConstant or LongS2 or Saturation')
         parser.add_argument('--file_list', type=str, help='file list')
         args = parser.parse_args()
         if len(vars(args)) != 2:
             raise Exception("Invalid number of arguments.")
-        if args.runtype not in ["TimeConstant", "Calibration", "Saturation"]:
+        if args.runtype not in ["TimeConstant", "LongS2", "Saturation"]:
             raise Exception("Invalid runtype.")
         runtype = args.runtype
         file_list = args.file_list
@@ -112,7 +117,7 @@ def main():
         
     except Exception as e:
         print("An error occurred while parsing arguments:", str(e))
-        print("Usagee: python bin2h5df.py --runtype Saturation/TimeConstant --file_list file_list.txt")
+        print("Usagee: python bin2h5df.py --runtype Saturation / TimeConstant / LongS2 --file_list file_list.txt")
         sys.exit(1)
 
 

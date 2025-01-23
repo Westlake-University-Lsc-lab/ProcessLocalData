@@ -237,6 +237,7 @@ def calculate_wf_mean_std_s2(file, threshold=100,  Channel='Anode'):
     data_array = None
     return mean_array[50:400], std_array[50:400]
 
+
 def calculate_fullwf_mean_std(file, threshold=100,  Channel='Anode'):  
     import pandas as pd
     import glob
@@ -245,6 +246,7 @@ def calculate_fullwf_mean_std(file, threshold=100,  Channel='Anode'):
     #####################################################################
     h5_files_pattern = r'{}*.h5py'.format(file.split('raw_')[0])
     print(h5_files_pattern)
+    
     h5_files = glob.glob(h5_files_pattern)
     df = pd.DataFrame()  #### comine all data
     for files in h5_files:
@@ -268,12 +270,14 @@ def calculate_fullwf_mean_std(file, threshold=100,  Channel='Anode'):
     #########################################################################
     if Channel == 'Anode':
         ch_selec = df.Ch == 0
+    elif Channel == 'Filter':
+        ch_selec = df.Ch == 1
     elif Channel == 'Dynode':
         ch_selec = df.Ch == 2
     df = df[ch_selec]
     wave_array = df['Wave'].values 
     data_array = np.zeros((len(wave_array), len(wave_array[0])))
-    for i in range(len(wave_array)):
+    for i in range(len(wave_array)-1):
         for j in range(len(wave_array[0])):
             data_array[i][j] = wave_array[i][j]        
     mean_array = np.mean(data_array, axis=0)

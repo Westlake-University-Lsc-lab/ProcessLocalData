@@ -65,15 +65,13 @@ def fit_single_channel(df, channel, ftag):
     else:
         print("Please input a valid parameter type with interger value.")
         sys.exit()   
-    area = df.Area_S2[df.Ch == channel].astype(np.float64).to_numpy()
+    area = df.Area[df.Ch == channel].astype(np.float64).to_numpy()
     if channel == 2:
         area = -area
         mean = np.mean(area)
         std = np.std(area)
         redge = np.max(area)
-        ledge = np.min(area)
-        if ledge < 0:
-            ledge = redge /2.      
+        ledge = np.min(area)       
         amp = len(area)
     elif channel != 2:       
         mean = np.mean(area)
@@ -81,7 +79,9 @@ def fit_single_channel(df, channel, ftag):
         ledge = np.min(area)
         redge = np.max(area)    
         amp = len(area)
-    nbins = 100              
+    nbins = 100        
+    if ledge < 0 or ledge < mean/4:
+        ledge = mean/4.      
     if channel == 0:
         pmt = 'LV1414'
     elif channel == 1:
@@ -94,40 +94,6 @@ def fit_single_channel(df, channel, ftag):
         xlabel=(r'Ch{}Area (PE)'.format(channel)),title=tile,Save=False)
     return s2_mu, s2_sigma
     
-def fit_S1_channel(df, channel, ftag):
-    if check_type(channel) ==True:
-        pass
-    else:
-        print("Please input a valid parameter type with interger value.")
-        sys.exit()   
-    area = df.Area_S1[df.Ch == channel].astype(np.float64).to_numpy()
-    if channel == 2:
-        area = -area
-        mean = np.mean(area)
-        std = np.std(area)
-        redge = np.max(area)
-        ledge = np.min(area)
-        if ledge < 0:
-            ledge = redge /2.      
-        amp = len(area)
-    elif channel != 2:       
-        mean = np.mean(area)
-        std = np.std(area)
-        ledge = np.min(area)
-        redge = np.max(area)    
-        amp = len(area)
-    nbins = 100              
-    if channel == 0:
-        pmt = 'LV1414'
-    elif channel == 1:
-        pmt = 'LV2415'
-    elif channel == 2:
-        pmt = 'LV2414 Dynode'
-    tile = r'{}'.format(pmt)
-    s1_mu, s1_sigma =  analysis_data.plot_fit_histgram_vs_Gaussion(
-        area,nbins,ledge,redge,p0=[amp,mean,std],file_tag=ftag, 
-        xlabel=(r'Ch{}Area (PE)'.format(channel)),title=tile,Save=False)
-    return s1_mu, s1_sigma
 
 
 def fit_baseline(df, channel, ftag):
@@ -155,47 +121,58 @@ def fit_baseline(df, channel, ftag):
         xlabel=(r'Ch{}Area (PE)'.format(channel)),title=tile,Save=False)
     return base_mu, base_sigma
    
-import analysis_data
-def calculate_wf_data_array(file_list, Channel='Anode'):
-    # time_delay_map = {'5us':5, '200us':200, '1ms':1000, '10ms':10000}  ## time delay unit on 'us'
-    led_config = ''
-    waveform_dictionary={}
-    with open(file_list, 'r') as list:
-        for line in list: 
-            file = line.rstrip('\n')
-            time_space=file.split('680mv_')[1].split('_50hz')[0]
-            led_config=file.split('combine_')[0]+'combine_'+file.split('combine_')[1].split('680mv_')[0]+'680mv_'
-            mean_, std_ = analysis_data.calculate_wf_mean_std_s2(file, threshold=100,  Channel=Channel)
-            waveform_dictionary[time_space] = {'mean_wf':mean_, 'std_wf':std_}
-    led_config = led_config.split('lv2414_')[1]
-    print(led_config)  
-    
-    return waveform_dictionary, led_config   
 
-def wf_array_S1(file_list, Channel='Anode'):
-    # time_delay_map = {'5us':5, '200us':200, '1ms':1000, '10ms':10000}  ## time delay unit on 'us'
-    base_config = []
+import analysis_data
+import runinfo
+def wf_array(file_list, Channel='Anode', tag=''):
+    config = []
     waveform_dictionary={}
-    Rd7 = ''
+    ftag = ''
     with open(file_list, 'r') as list:
         for line in list: 
             file = line.rstrip('\n')
-            config_tag=file.split('base_')[1].split('_run')[0]
             index = file.find('reference') 
-            if index != -1:
-                Rd7 = 'Ref'
-            elif index == -1:             
-                Rd7 = file.split('Rd7_')[1].split('_run')[0]
-            mean_, std_ = analysis_data.calculate_wf_mean_std_s2(file, threshold=100, Channel=Channel)
-            waveform_dictionary[Rd7] = {'mean_wf':mean_, 'std_wf':std_}
-            # print(Rd7)           
-            base_config.append(config_tag) 
-    return waveform_dictionary, base_config  
+            if tag == 'Rd7':
+                if index != -1:
+                    ftag = 'Ref'
+                    config_tag=file.split('base_')[1].split('_run')[0]                    
+                elif index == -1:             
+                    ftag = file.split('Rd7_')[1].split('_run')[0]
+                    config_tag=file.split('base_')[1].split('_run')[0]                    
+            if tag == 'Rd':
+                if index != -1:
+                    ftag = 'Ref'
+                    config_tag=file.split('base_')[1].split('_run')[0]                    
+                elif index == -1:             
+                    ftag = file.split('base_Rd')[1].split('_Riz')[0]
+                    config_tag=file.split('base_')[1].split('_run')[0]
+            if tag == 'Riz':
+                if index != -1:
+                    ftag = 'Ref'
+                    config_tag=file.split('base_')[1].split('_run')[0]                    
+                elif index == -1:             
+                    ftag = file.split('_Riz')[1].split('_Cc10nf')[0]
+                    config_tag=file.split('base_')[1].split('_run')[0]
+            if tag == 'Dt':
+                ftag=file.split('680mv_')[1].split('_50hz')[0]
+                config_tag=file.split('combine_')[0]+'combine_'+file.split('combine_')[1].split('680mv_')[0]+'680mv_'
+                config_tag = config_tag.split('lv2414_')[1]
+            if tag == '':
+                print('No tag is given, this is just check wf feature')
+                # ftag=file.split('base_')[1].split('_run')[0]
+                ftag=file.split('outnpy/')[1].split('.h5py')[0] 
+                # config_tag=file.split('outnpy/')[1].split('.h5py')[0]  
+                config_tag = runinfo.determine_runtype(file)               
+            mean_, std_ = analysis_data.calculate_fullwf_mean_std(file, threshold=100, Channel=Channel)
+            waveform_dictionary[ftag] = {'mean_wf':mean_, 'std_wf':std_}
+            config.append(config_tag) 
+    return waveform_dictionary, config 
+
 
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
-cmap = cm.get_cmap('tab10')  
+cmap = plt.cm.rainbow(np.linspace(0, 1, 9))
 fig, ax = plt.subplots() 
 
 def plot_waveform(mean_wf, std_wf, cmap_index, delta_t):
@@ -207,8 +184,27 @@ def plot_waveform(mean_wf, std_wf, cmap_index, delta_t):
         LED_config (str): '1p8v_900mv'
     """ 
     x = np.arange(len(mean_wf))  
-    ax.fill_between(x, mean_wf - std_wf, mean_wf + std_wf, color=cmap(cmap_index), alpha=0.3)  
-    ax.plot(x, mean_wf, color=cmap(cmap_index), label=delta_t)  
+    ax.fill_between(x, mean_wf - std_wf, mean_wf + std_wf, color=cmap[cmap_index], alpha=0.3)  
+    ax.plot(x, mean_wf, color=cmap[cmap_index], label=delta_t)  
     ax.set_xlabel('Sample Index[4ns]')
     ax.set_ylabel('Amplitude[ADC]')  
-    ax.legend()  
+
+from scipy.optimize import curve_fit
+
+def linear_fit(x_data, y_data):
+    import numpy as np
+    coefficients = np.polyfit(x_data, y_data, 1) 
+    return coefficients
+
+def log_model(x, a, b):
+    return a * np.log(x) + b
+def linear_model(x, m, c):
+    return m * x + c
+
+def linear_model_fit(x, y):
+    popt, pcov = curve_fit(linear_model, x, y)
+    return popt, pcov
+
+def log_model_fit(x, y):
+    popt, pcov = curve_fit(log_model, x, y)
+    return popt, pcov

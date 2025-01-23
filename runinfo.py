@@ -4,6 +4,10 @@ def determine_runtype(run_file):
         runtype = 'Saturation'
     elif '1p36v_0p68v' in run_file:
         runtype = 'TimeConstant'
+    elif 'LongS2' in run_file:
+        runtype = 'LongS2'
+    else:
+        runtype = 'others'
     return runtype
 
 def find_date(s):
@@ -64,14 +68,14 @@ def find_voltage(s, runtype):
                 voltage_value = float(voltage_part.replace('p', '.'))
                 return voltage_value
 
-def parse_run_info(rawfilename):
-    runtype = determine_runtype(rawfilename)
+def parse_run_info(rawfilename, runtype):
+    # runtype = determine_runtype(rawfilename)
     run_info = []
     date = find_date(rawfilename)
     volate = find_voltage(rawfilename, runtype)
     if runtype == 'TimeConstant':
         delta_t = find_deta_t(rawfilename, runtype)
-    elif runtype == 'Saturation':
+    elif runtype == 'Saturation' or runtype == 'LongS2':
         delta_t = 5
     trig_rate = find_trig_rate(rawfilename, runtype)
     run_tag = find_run_tag(rawfilename, runtype)
@@ -86,18 +90,3 @@ def parse_run_info(rawfilename):
     }]
     return run_info
  
-import os
-def modify_file_names(target_date_str, modify_string, new_date_str):
-    search_path = "/mnt/data/PMT/R8520_406/"
-    if not os.access(search_path, os.F_OK):
-        raise ValueError("Path not found or inaccessible: " + search_path)
-    for root, dirs, files in os.walk(search_path):
-        for filename in files:
-            if target_date_str in filename:
-                new_filename = filename.replace(modify_string, new_date_str)
-                old_file_path = os.path.join(root, filename)
-                new_file_path = os.path.join(root, new_filename)
-                os.rename(old_file_path, new_file_path)
-                print("--------------------")                
-                print("New filename:", new_file_path)
-
