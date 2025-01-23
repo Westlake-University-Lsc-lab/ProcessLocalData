@@ -4,7 +4,6 @@ import daw_readout
 import time
 import os
 
-
 ### read data and clculate start, min, end index ###
 def pusle_index(waveform_data):
     ### find min index ###
@@ -45,23 +44,6 @@ def find_waveform_intersections(waveform, baseline, negative_pulse=True, percent
     max_index = crossings[-1]
     return peak_index, min_index, max_index
 
-# def find_waveform_intersections(waveform, baseline, negative_pulse=True, percent=0.1):
-#     if !negative_pulse:
-#         waveform=np.negative(waveform)
-#         baseline=np.negative(baseline)
-#     waveform_below_baseline = waveform[waveform < baseline]
-#     if len(waveform_below_baseline) == 0:
-#         return None, None, None
-#     peak_value = np.min(waveform_below_baseline)
-#     peak_index = np.argmin(waveform)
-#     height = peak_value - baseline
-#     threshold = baseline + percent * height
-#     crossings = np.where(np.diff(np.sign(waveform - threshold)) != 0)[0]
-#     if len(crossings) == 0:
-#         return peak_index, None, None
-#     min_index = crossings[0]
-#     max_index = crossings[-1]
-#     return peak_index, min_index, max_index
 
 ### calculate area of puse with dynamic range ###
 pe_fact  = (2./16384)*4.e-9/(50*1.6e-19)/1.e6  ## to PE
@@ -107,3 +89,10 @@ def write_to_hdf5(df, filename):
     print(r"h5 File Size: {:.2f} MB".format( file_size/(1024*1024)) )
     print("Save to {}".format(filename))
     return write_time,  file_size
+
+def cal_rms(data):
+    import math
+    squared_sum = sum(element**2 for element in data)
+    average_squared = squared_sum / len(data)
+    rms = math.sqrt(average_squared)
+    return rms
