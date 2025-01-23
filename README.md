@@ -10,43 +10,29 @@ cd ProcessLocalData
 git checkout your_branch_name
 ```
 
-#### to process data files from mulit runs(LED runs for example), run the following command in terminal:
-```
-ls -lrth --time-style=+%Y-%m-%d\ %H:%M /mnt/data/PMT/R8520_406/LV2415_anodereadout_LV2414_dualreadout_20240821_LED_1.7V_11ns_400_ratio_run* >> runlist/LED_1.7V_11ns_400_ratio_runs
+#### to process and analyze the data, you should be under python3.8 environment, the folowing is the steps:
+
+#### convert the binary data to hdf5 format:
 
 ```
-#### you need to edit the runlist/LED\_1.7V\_11ns\_400\_ratio\_runs file with:
-
-```
-vim runlist/LED_1.7V_11ns_400_ratio_runs
-ctl+v
--> right arrow till 'MB', and leave the 'year-month-day-hour-minute
-:wq!
+python bin2h5df.py --runtype ['Saturation or TimeConstant or LongS2 or others'] --file_list {'file_list.txt'}
 ```
 
-#### the `runlist/LED_1.7V_11ns_400_ratio_runs`shows like this:
+#### use guassian fit the spectrum:
 
 ```
-more runlist/LED_1.7V_11ns_400_ratio_runs
-2024-08-21 14:49 /mnt/data/PMT/R8520_406/LV2415_anodereadout_LV2414_dualreadout_20240821_LED_1.7V_11ns_400_ratio_run0_raw_b0_seg0.bin
-2024-08-21 15:03 /mnt/data/PMT/R8520_406/LV2415_anodereadout_LV2414_dualreadout_20240821_LED_1.7V_11ns_400_ratio_run1_raw_b0_seg0.bin
+python guassainfitspectrum.py.py --file_list {file_list.txt'}
 ```
 
-#### then run the following command to process the data:
-```
-mkdir outnpy/
-python bin2h5py.py runlist/LED_1.7V_11ns_400_ratio_runs
+#### scale ADC to PEns
 
 ```
+python sacle2PEns.py --runtype {' Saturation or TimeConstant'} --file {'outnpy/*_single_gussain.h5py'}
+```
 
-##### still, there are some bugs need to be fixed, during saving the data to hdf5 format( bin2h5py.py )..
+#### calculate R2ref of the time constant data:
 
-#### the processed data will be saved in hdf5 format in the same directory which you have to run:
+```
+python sacle2PEns.py --file  {'outnpy/*single_gussain_TimeConstant_scaled.h5py'}
 
-`ls outnpy/`
-
-#### or you can also run `raw2h5py.ipynb`to process the data in jupyter notebook.
-
-#### some data has been processed and saved in hdf5 format, you can found them here:
-
-`ls /home/ProcessLocalData/outnpy/`
+```
