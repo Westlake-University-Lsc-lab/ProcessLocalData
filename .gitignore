@@ -28,3 +28,4 @@ relics.mplstyle
 common_setup.py
 
 *.tar.gz
+*.ipynb
