@@ -46,7 +46,7 @@ def main():
         args = parser.parse_args()       
         if not args.file:
             print("Please provide file")
-            print("Usagee: python sacle2PEns.py --file outnpy/*single_gussain_TimeConstant_scaled.h5py")
+            print("Usagee: python CalR2ref.py --file outnpy/*single_gussain_TimeConstant_scaled.h5py")
             return
                 
         grouped_lists = group_by_voltage(args.file)
