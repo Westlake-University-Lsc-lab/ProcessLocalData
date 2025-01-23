@@ -10,7 +10,7 @@ cd ProcessLocalData
 git checkout your_branch_name
 ```
 
-#### to process and analyze the data, you should be under python3.8 environment, the folowing is the steps:
+#### to process and analyze the data, you should be under **python3.8** environment, the folowing is the steps:
 
 #### convert the binary data to hdf5 format:
 
@@ -18,14 +18,18 @@ git checkout your_branch_name
 python bin2h5df.py --runtype ['Saturation/TimeConstant/LongS2/others'] --file_list {'runlist'}
 python bin2h5df.py   --runtype Saturation  --file_list runlist/resistor_62p5M_saturation
 ```
-###  process file list will be saved in 'runlist/resistor_62p5M_saturation_processed'
+
+### process file list will be saved in '_runlist/resistor_62p5M_saturation_processed'_
+
 #### use guassian fit the spectrum:
 
 ```
 python guassainfitspectrum.py.py --file_list {processed_list'}
 python guassainfitspectrum.py  --file_list runlist/resistor_62p5M_saturation_processed
 ```
-#### the all fitted data will be saved in 'outnpy/*_single_gussain.h5py'
+
+#### the all fitted data will be saved in 'outnpy/\*\_single_gussain.h5py'
+
 #### scale ADC to PEns
 
 ```
@@ -36,5 +40,4 @@ python sacle2PEns.py --runtype {' Saturation or TimeConstant'} --file {'outnpy/*
 
 ```
 python CalR2ref.py --file  {'outnpy/*single_gussain_TimeConstant_scaled.h5py'}
-
 ```
