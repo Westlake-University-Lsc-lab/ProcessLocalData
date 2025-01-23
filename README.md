@@ -15,15 +15,17 @@ git checkout your_branch_name
 #### convert the binary data to hdf5 format:
 
 ```
-python bin2h5df.py --runtype ['Saturation or TimeConstant or LongS2 or others'] --file_list {'file_list.txt'}
+python bin2h5df.py --runtype ['Saturation/TimeConstant/LongS2/others'] --file_list {'runlist'}
+python bin2h5df.py   --runtype Saturation  --file_list runlist/resistor_62p5M_saturation
 ```
-
+###  process file list will be saved in 'runlist/resistor_62p5M_saturation_processed'
 #### use guassian fit the spectrum:
 
 ```
-python guassainfitspectrum.py.py --file_list {file_list.txt'}
+python guassainfitspectrum.py.py --file_list {processed_list'}
+python guassainfitspectrum.py  --file_list runlist/resistor_62p5M_saturation_processed
 ```
-
+#### the all fitted data will be saved in 'outnpy/*_single_gussain.h5py'
 #### scale ADC to PEns
 
 ```
@@ -33,6 +35,6 @@ python sacle2PEns.py --runtype {' Saturation or TimeConstant'} --file {'outnpy/*
 #### calculate R2ref of the time constant data:
 
 ```
-python sacle2PEns.py --file  {'outnpy/*single_gussain_TimeConstant_scaled.h5py'}
+python CalR2ref.py --file  {'outnpy/*single_gussain_TimeConstant_scaled.h5py'}
 
 ```
