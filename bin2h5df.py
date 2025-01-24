@@ -16,6 +16,36 @@ atten_18DB = c.attenuation_factor_18DB
 atten_20DB = c.attenuation_factor_20DB 
 atten_0DB = 1.0
 
+def get_attenuation_factor(ch, runtype):
+    if ch == 0:
+        if runtype == "TimeConstant":
+            return atten_0DB
+        elif runtype == "Saturation":
+            return atten_9DB
+        elif runtype == "Calibration":
+            return atten_20DB
+        elif runtype == "LongS2":
+            return atten_0DB      
+        elif runtype == "others":
+            return atten_0DB
+        else:
+            print("Attention: Unknown runtype, use default attenuation factor 0DB")
+            return atten_0DB
+    if ch == 1:
+        if runtype == "TimeConstant":
+            return atten_0DB
+        elif runtype == "Saturation":
+            return atten_0DB
+        elif runtype == "Calibration":
+            return atten_12DB        
+        elif runtype == "LongS2":
+            return atten_0DB
+        elif runtype == "others":
+            return atten_0DB
+        else:
+            print("Attention: Unknown runtype, use default attenuation factor 0DB")
+            return atten_0DB
+
 class RunInfo:
     def __init__(self, run_type, run_info):
         self.run_type = run_type
@@ -33,6 +63,8 @@ def process(rawfilename, runtype):
     runtype_ = runinfo.determine_runtype(rawfilename)   
     if runtype !=  runtype_:
         print("Attention: runtype in file name does not match the specified runtype.")
+        print("Specified runtype: ", runtype)
+        print("File runtype: ", runtype_)
         sys.exit(1)
     file_run_info = runinfo.parse_run_info(rawfilename, runtype)
     run_info = file_run_info[0]        
@@ -46,27 +78,9 @@ def process(rawfilename, runtype):
         pulse = wave.Waveform
         area = process_data.pulse_area_fix_range(pulse, 50, 370, base)
         if ch == 0 :
-            if runtype == "TimeConstant":
-                # area = area / gain_2414 *atten_20DB
-                area = area / gain_2414 
-            elif runtype == "Saturation":
-                area = area / gain_2414 *atten_9DB
-            elif runtype == "LongS2":
-                area = area / gain_2414 *atten_0DB            
-            else:
-                print("Attention: Unknown runtype, use default gain and attenuation factor 9DB")
-                area = area / gain_2414 *atten_9DB
-        elif ch == 1 :
-            if runtype == "TimeConstant":
-                #area = area / gain_2415 *atten_9DB
-                area = area / gain_2415
-            elif runtype == "Saturation":
-                area = area / gain_2415 
-            elif runtype == "LongS2":
-              area = area / gain_2415*atten_0DB 
-            else:
-                print("Attention: Unknown runtype, use default gain and attenuation factor 0DB")
-                area = area / gain_2415         
+            area = abs(area / gain_2414 * get_attenuation_factor(ch, runtype))
+        elif ch == 1:
+            area = area / gain_2415 * get_attenuation_factor(ch, runtype)
         elif ch == 2:
             area = area / gain_2414 
         winfo.append({
@@ -98,7 +112,7 @@ def main():
         args = parser.parse_args()
         if len(vars(args)) != 2:
             raise Exception("Invalid number of arguments.")
-        if args.runtype not in ["TimeConstant", "LongS2", "Saturation"]:
+        if args.runtype not in ["TimeConstant", "LongS2", "Saturation", "Calibration", "others"]:
             raise Exception("Invalid runtype.")
         runtype = args.runtype
         file_list = args.file_list
