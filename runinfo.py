@@ -4,6 +4,8 @@ def determine_runtype(run_file):
         runtype = 'Saturation'
     elif '1p36v_0p68v' in run_file:
         runtype = 'TimeConstant'
+    elif 'Calibration_1kHz' in run_file:
+        runtype = 'Calibration'    
     elif 'LongS2' in run_file:
         runtype = 'LongS2'
     else:
@@ -26,11 +28,8 @@ def find_date(s):
 def find_deta_t(s, runtype):
     if runtype == 'TimeConstant':
         delta_t = s.split('1p36v_0p68v_')[1].split('us_')[0]
-    elif runtype == 'Saturation':
-        delta_t = 5
     else:
-        print("Error: Unknown run type")
-        return None
+        delta_t = None
     return delta_t
 
 def find_trig_rate(s, runtype):
@@ -40,6 +39,13 @@ def find_trig_rate(s, runtype):
     elif runtype == 'TimeConstant':
         trig_rate = s.split('us_')[1].split('Hz')[0]
         return trig_rate
+    elif runtype == 'Calibration':
+        trig_rate = s.split('Calibration_')[1].split('Hz')[0]
+        return trig_rate
+    else:
+        trig_rate = None
+        return trig_rate
+        
 
 def find_run_tag(s, runtype):
     run_tag = s.split('Hz_')[1].split('_run')[0]
@@ -67,16 +73,24 @@ def find_voltage(s, runtype):
                 voltage_part = s[voltage:shifted_voltage]
                 voltage_value = float(voltage_part.replace('p', '.'))
                 return voltage_value
+    elif runtype == 'Calibration':
+        voltage = s.find(date) + 9
+        Cal_index = s.find('Calibration') -1
+        if voltage != -1 and Cal_index!= -1:  
+            voltage_part = s[voltage:Cal_index]
+            voltage_value = float(voltage_part.replace('p', '.').replace('v', ''))
+            return voltage_value
+    else:
+        voltage = None
+        return voltage
+            
 
 def parse_run_info(rawfilename, runtype):
     # runtype = determine_runtype(rawfilename)
     run_info = []
     date = find_date(rawfilename)
     volate = find_voltage(rawfilename, runtype)
-    if runtype == 'TimeConstant':
-        delta_t = find_deta_t(rawfilename, runtype)
-    elif runtype == 'Saturation' or runtype == 'LongS2':
-        delta_t = 5
+    delta_t =  find_deta_t(rawfilename, runtype)
     trig_rate = find_trig_rate(rawfilename, runtype)
     run_tag = find_run_tag(rawfilename, runtype)
     file_tag = find_file_tag(rawfilename, runtype)
