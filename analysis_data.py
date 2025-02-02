@@ -1,28 +1,8 @@
 
-from landaupy import landau
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-    
-def landau_fit(xdata, location, scale, A):
-    mu = location
-    sigma = scale
-    return A*landau.pdf(xdata, mu, sigma)
-
-def gaussian(x, a, mu, sigma):
-    return a * np.exp(-(x - mu)**2 / (2 * sigma**2))
-
-def load_runlist_to_numpy(runlist_path):
-    with open(runlist_path, 'r') as file:
-        runlist = file.readlines()
-    runlist = [run.strip() for run in runlist]
-    return np.array(runlist)
-    
-def load_runlist_to_numpy(runlist_path):
-    with open(runlist_path, 'r') as file:
-        runlist = file.readlines()
-    runlist = [run.strip() for run in runlist]
-    return np.array(runlist)
+import fit_package 
 
 def plot_waveform(wave, baseline,  xmin=0, xmax=150, ttt=888, area=100, pmt='LV2414',  ch='Anode', Save=False, file_tag='20240830_LED_run', title='LED Ch0 Waveform'):
     plt.figure()
@@ -49,9 +29,9 @@ def plot_waveform(wave, baseline,  xmin=0, xmax=150, ttt=888, area=100, pmt='LV2
 def plot_fit_histgram_vs_Gaussion(array, nbins, left_edge, right_edge, p0=[1.e4, 100, 10],file_tag='20240830_LED_run',xlabel='Ch0 Area', title='LED Ch0 Area', Save=False):
     hist, bins_edges = np.histogram(array, bins= nbins, range=(left_edge, right_edge))
     bins = (bins_edges[:-1] + bins_edges[1:])/2
-    popt, _ = curve_fit(gaussian, bins, hist, p0=p0)
+    popt, _ = curve_fit(fit_package.gaussian, bins, hist, p0=p0)
     x_fit = np.linspace(np.min(bins), np.max(bins), 1000)
-    y_fit = gaussian(x_fit, *popt)
+    y_fit = fit_package.gaussian(x_fit, *popt)
     plt.plot(x_fit, y_fit, label=r'$\mu$={:.2f}, $\sigma$={:.2f}'.format(popt[1], popt[2]))
     plt.hist(array, bins=nbins, range=(left_edge, right_edge),  color='black', density=False, alpha=0.5, label=xlabel)
     plt.xlabel(r'{} '.format(xlabel))
