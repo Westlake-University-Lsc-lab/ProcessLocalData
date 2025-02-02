@@ -41,7 +41,7 @@ def main():
  
         if not args.file_list:
             print("Please provide file_list")
-            print("Usagee: python guassainfitspectrum.py.py --file_list file_list.txt")
+            print("Usagee: python guassainfitspectrum.py --file_list file_list.txt")
             return
        
         file_list = args.file_list
@@ -53,7 +53,7 @@ def main():
     except Exception as e:
         print(e)
         print('Please provide all required arguments')
-        print("Usagee: python guassainfitspectrum.py.py --file_list file_list.txt")
+        print("Usagee: python guassainfitspectrum.py --file_list file_list.txt")
         sys.exit(1)
 
 
