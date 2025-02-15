@@ -8,6 +8,8 @@ def determine_runtype(run_file):
         runtype = 'Calibration'    
     elif 'LongS2' in run_file:
         runtype = 'LongS2'
+    elif 'DecayConstant' in run_file:
+        runtype = 'DecayConstant'
     else:
         runtype = 'others'
     return runtype
@@ -80,10 +82,33 @@ def find_voltage(s, runtype):
             voltage_part = s[voltage:Cal_index]
             voltage_value = float(voltage_part.replace('p', '.').replace('v', ''))
             return voltage_value
+    elif runtype == 'DecayConstant':
+        voltage = s.find(date) + 9
+        if voltage != -1 :  
+            shifted_voltage = voltage + 4
+            if shifted_voltage < len(s):
+                voltage_part = s[voltage:shifted_voltage]
+                voltage_value = float(voltage_part.replace('p', '.').replace('v', ''))
+                return voltage_value
     else:
         voltage = None
         return voltage
             
+def check_trigger_mode(runtype):
+    if runtype == 'Saturation':
+        trigger_mode = 'External'
+    elif runtype == 'TimeConstant':
+        trigger_mode = 'External'
+    elif runtype == 'Calibration':
+        trigger_mode = 'External'
+    elif runtype == 'LongS2':
+        trigger_mode = 'External'
+    elif runtype == 'DecayConstant':
+        trigger_mode = 'Self'
+    else:
+        trigger_mode = 'Unknown'
+    return trigger_mode
+
 
 def parse_run_info(rawfilename, runtype):
     # runtype = determine_runtype(rawfilename)
