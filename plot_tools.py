@@ -67,6 +67,7 @@ def plot_wf_array(flist, Channel='Anode'):
     plt.legend(loc='upper right')   
     plt.show()
 
+
 def plot_waveform(mean_wf, std_wf, index, delta_t):
     """plot waveform 
     parameter:
@@ -78,8 +79,8 @@ def plot_waveform(mean_wf, std_wf, index, delta_t):
     x = np.arange(len(mean_wf))  
     plt.fill_between(x, mean_wf - std_wf, mean_wf + std_wf, color=cmap[index], alpha=0.3)  
     plt.plot(x, mean_wf, color=cmap[index], label=delta_t)  
-    plt.set_xlabel('Sample Index[4ns]')
-    plt.set_ylabel('Amplitude[ADC]')  
+    plt.xlabel('Sample Index[4ns]')
+    plt.ylabel('Amplitude[ADC]')  
     
     
 
