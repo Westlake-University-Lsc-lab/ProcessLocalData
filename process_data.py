@@ -73,8 +73,8 @@ def detect_all_pulses(data, base):
     local_minima = find_local_minima(data)
     for min_idx in local_minima:
         start,  end = improved_pulse_index(data, min_idx, base)
-        # if validate_pulse(start, end, data, 20.0): 
-        pulses.append((start, end, min_idx))
+        if validate_pulse(start, end, data, 20.0): 
+            pulses.append((start, end, min_idx))
     return pulses
 
 ### read data and clculate start, min, end index ###
