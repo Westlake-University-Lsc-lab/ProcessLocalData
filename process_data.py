@@ -4,8 +4,81 @@ import daw_readout
 import time
 import os
 
+def smooth_data(data, window_size=5):
+    return np.convolve(data, np.ones(window_size)/window_size, mode='same')
+
+def find_local_minima(data, window=10):
+    minima = []
+    for i in range(window, len(data)-window):
+        if data[i] == np.min(data[i-window:i+window]):
+            minima.append(i)
+    return minima
+def estimate_baseline(data, head_ratio=0.1, tail_ratio=0.1):
+    head_samples = data[:int(len(data)*head_ratio)]
+    tail_samples = data[-int(len(data)*tail_ratio):]
+    return np.mean(np.concatenate([head_samples, tail_samples]))
+
+def validate_pulse(start: int, end: int, data: np.ndarray, threshold: float) -> bool:
+    """    
+    Args:
+        start (int): pulse start index
+        end (int): pulse end index
+        data (np.ndarray): pulse data
+        threshold (float): pulse amplitude threshold
+    
+    Returns:
+        bool: True (valid) / False(invalid)
+    """
+    pulse_width = end - start + 1
+    if pulse_width <= 3:
+        return False
+    
+    # calculate mean value using the pre and post 10 samples of pulse as baseline
+    pre_pulse = data[max(0, start - 10): start]
+    post_pulse = data[end + 1: min(len(data), end + 10)]
+    baseline = np.mean(np.concatenate([pre_pulse, post_pulse])) if len(pre_pulse) + len(post_pulse) > 0 else np.median(data)
+    
+    # calculate amplitude of pulse
+    pulse_segment = data[start: end + 1]
+    peak_value = np.max(pulse_segment) if abs(np.max(pulse_segment) - baseline) > abs(np.min(pulse_segment) - baseline) else np.min(pulse_segment)
+    amplitude = abs(peak_value - baseline)
+    
+    return amplitude >= threshold
+
+def improved_pulse_index(data, min_idx, baseline):   
+    threshold_ratio = 0.1  
+    gradient_threshold = 0.5  
+    # baseline = estimate_baseline(data)   
+    start_index = min_idx
+    while start_index > 0:
+        delta = data[start_index] - baseline
+        grad = data[start_index] - data[start_index-1]
+        if delta > threshold_ratio * (baseline - min_idx) or grad > gradient_threshold:
+            break
+        start_index -= 1         
+    end_index = min_idx
+    while end_index < len(data)-1 :
+        delta = data[end_index] - baseline
+        grad = data[end_index] - data[end_index+1]
+        if delta > threshold_ratio * (baseline - min_idx) or grad > gradient_threshold:
+            break
+        end_index += 1 
+    start_index = max(0, start_index)
+    end_index = min(len(data)-1, end_index)    
+    return start_index,  end_index
+
+    
+def detect_all_pulses(data, base):
+    pulses = []
+    local_minima = find_local_minima(data)
+    for min_idx in local_minima:
+        start,  end = improved_pulse_index(data, min_idx, base)
+        # if validate_pulse(start, end, data, 20.0): 
+        pulses.append((start, end, min_idx))
+    return pulses
+
 ### read data and clculate start, min, end index ###
-def pusle_index(waveform_data):
+def pulse_index(waveform_data):
     ### find min index ###
     min_index = 0
     min_value = waveform_data[0]
@@ -96,3 +169,69 @@ def cal_rms(data):
     average_squared = squared_sum / len(data)
     rms = math.sqrt(average_squared)
     return rms
+
+
+def find_main_pulse(segment):
+    """
+    Main pulse detection algorithm
+    """
+    # Check if the segment has only one pulse
+    if len(segment['Area']) != 1 or len(segment['hight']) != 1:
+        return None
+    
+    area = segment['Area'][0]
+    height = segment['hight'][0]
+    
+    # main pulse detection
+    if  height > 1000:  # PE and ADC thresholds
+        return {
+            'ttt': segment['TTT'],
+            'main_area': area,
+            'main_height': height,
+            'Wave': segment['Wave']
+        }
+    return None
+
+def process_all_segments(df):
+    """
+    Process all segments in the dataframe
+    """
+    results = []
+    current_main = None
+    
+    # Sort the dataframe by TTT
+    df = df.sort_values('TTT')    
+    for idx, row in df.iterrows():
+        if row['Ch'] != 0:
+            continue
+        if main_pulse := find_main_pulse(row):
+            # Save the previous main pulse
+            if current_main:
+                results.append(current_main)
+            
+            # initailize main pulse            
+            current_main = {
+                'main_ttt': main_pulse['ttt'],
+                'main_area': main_pulse['main_area'],
+                'main_height': main_pulse['main_height'],
+                'post_events': []
+            }
+        
+        # record post events
+        elif current_main is not None:
+            if len(row['Area']) == 0:
+                continue
+            
+            for area, height in zip(row['Area'], row['hight']):
+                time_interval = row['TTT'] - current_main['main_ttt'] * 4.e-9 # 4ns                
+                current_main['post_events'].append({
+                    'delay': time_interval,
+                    'area': area,
+                    'height': height
+                })
+    
+    # Save the last main pulse
+    if current_main:
+        results.append(current_main)
+    
+    return pd.DataFrame(results)
