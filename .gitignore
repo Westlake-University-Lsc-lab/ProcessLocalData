@@ -29,3 +29,6 @@ common_setup.py
 
 *.tar.gz
 *.ipynb
+
+decayrate/
+*.png
