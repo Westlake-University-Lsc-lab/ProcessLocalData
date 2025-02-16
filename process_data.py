@@ -4,10 +4,13 @@ import daw_readout
 import time
 import os
 
-def smooth_data(data, window_size=5):
+'''
+find a pulse in segment, and return the start, end, peak index of the pulse
+'''
+def smooth_data(data, window_size=3):
     return np.convolve(data, np.ones(window_size)/window_size, mode='same')
 
-def find_local_minima(data, window=10):
+def find_local_minima(data, window=3):
     minima = []
     for i in range(window, len(data)-window):
         if data[i] == np.min(data[i-window:i+window]):
@@ -18,32 +21,59 @@ def estimate_baseline(data, head_ratio=0.1, tail_ratio=0.1):
     tail_samples = data[-int(len(data)*tail_ratio):]
     return np.mean(np.concatenate([head_samples, tail_samples]))
 
-def validate_pulse(start: int, end: int, data: np.ndarray, threshold: float) -> bool:
+def validate_pulse(
+    start: int,
+    end: int, 
+    hight: int,
+    threshold: float
+) -> bool:
+    """Validate if a pulse meets criteria.    
+    Args:
+        start (int): Pulse start index
+        end (int): Pulse end index
+        hight (int): Pulse height (amplitude)
+        threshold (float): Minimum amplitude threshold
+    
+    Returns:
+        bool: 
+            - True if both conditions are met: 
+                1. pulse_width >= 0 
+                2. hight >= threshold
+            - False otherwise
+    """
+    # Check if pulse duration is valid
+    pulse_width = end - start + 1
+    if pulse_width < 0:
+        return False
+    
+    # Check if amplitude meets threshold
+    if hight < threshold:
+        return False
+        
+    # Both conditions satisfied
+    return True
+
+def pulse_hight(
+    start: int, 
+    end: int, 
+    data: np.ndarray,
+    baseline:int,
+    ):
     """    
     Args:
         start (int): pulse start index
         end (int): pulse end index
         data (np.ndarray): pulse data
-        threshold (float): pulse amplitude threshold
+        baseline (int): pulse baseline
     
     Returns:
-        bool: True (valid) / False(invalid)
+        float: pulse height
     """
-    pulse_width = end - start + 1
-    if pulse_width <= 3:
-        return False
-    
-    # calculate mean value using the pre and post 10 samples of pulse as baseline
-    pre_pulse = data[max(0, start - 10): start]
-    post_pulse = data[end + 1: min(len(data), end + 10)]
-    baseline = np.mean(np.concatenate([pre_pulse, post_pulse])) if len(pre_pulse) + len(post_pulse) > 0 else np.median(data)
-    
     # calculate amplitude of pulse
     pulse_segment = data[start: end + 1]
     peak_value = np.max(pulse_segment) if abs(np.max(pulse_segment) - baseline) > abs(np.min(pulse_segment) - baseline) else np.min(pulse_segment)
     amplitude = abs(peak_value - baseline)
-    
-    return amplitude >= threshold
+    return amplitude
 
 def improved_pulse_index(data, min_idx, baseline):   
     threshold_ratio = 0.1  
@@ -66,17 +96,20 @@ def improved_pulse_index(data, min_idx, baseline):
     start_index = max(0, start_index)
     end_index = min(len(data)-1, end_index)    
     return start_index,  end_index
-
     
 def detect_all_pulses(data, base):
     pulses = []
     local_minima = find_local_minima(data)
     for min_idx in local_minima:
         start,  end = improved_pulse_index(data, min_idx, base)
-        if validate_pulse(start, end, data, 20.0): 
-            pulses.append((start, end, min_idx))
+        hight = pulse_hight(start, end, data, base)
+        if validate_pulse(start, end, hight, 20.0) is True:
+            pulses.append((start, end, min_idx, hight))
     return pulses
 
+'''
+old version of pulse finding algorithm
+'''
 ### read data and clculate start, min, end index ###
 def pulse_index(waveform_data):
     ### find min index ###
@@ -99,7 +132,7 @@ def pulse_index(waveform_data):
     while end_index < len(waveform_data)-1 and (waveform_data[end_index] - waveform_data[end_index+1]) < 0  :
         end_index +=1       
         
-    return start_index, min_index, end_index
+    return start_index, end_index,  min_index
 
 def find_waveform_intersections(waveform, baseline, negative_pulse=True, percent=0.1):
     if negative_pulse:
@@ -118,6 +151,9 @@ def find_waveform_intersections(waveform, baseline, negative_pulse=True, percent
     return peak_index, min_index, max_index
 
 
+'''
+function to calculate area of pulse
+'''
 ### calculate area of puse with dynamic range ###
 pe_fact  = (2./16384)*4.e-9/(50*1.6e-19)/1.e6  ## to PE
 def pulse_area(
@@ -171,28 +207,28 @@ def cal_rms(data):
     return rms
 
 
-def find_main_pulse(segment):
+'''
+find main pulse in segment data
+'''
+def find_main_pulse(segment, heigh_threshold=4000):
     """
     Main pulse detection algorithm
-    """
-    # Check if the segment has only one pulse
-    if len(segment['Area']) != 1 or len(segment['hight']) != 1:
-        return None
-    
-    area = segment['Area'][0]
-    height = segment['hight'][0]
+    """    
+    area = segment['Area']
+    height = segment['Hight']
     
     # main pulse detection
-    if  height > 1000:  # PE and ADC thresholds
+    if  height > heigh_threshold:  # PE and ADC thresholds
         return {
             'ttt': segment['TTT'],
             'main_area': area,
             'main_height': height,
-            'Wave': segment['Wave']
         }
     return None
-
-def process_all_segments(df):
+'''
+calculate the delay between main pulse and post events
+'''
+def process_all_segments(df, heigh_threshold):
     """
     Process all segments in the dataframe
     """
@@ -202,9 +238,9 @@ def process_all_segments(df):
     # Sort the dataframe by TTT
     df = df.sort_values('TTT')    
     for idx, row in df.iterrows():
-        if row['Ch'] != 0:
-            continue
-        if main_pulse := find_main_pulse(row):
+        # if row['Ch'] != 0:
+        #     continue
+        if main_pulse := find_main_pulse(row, heigh_threshold):
             # Save the previous main pulse
             if current_main:
                 results.append(current_main)
@@ -219,11 +255,13 @@ def process_all_segments(df):
         
         # record post events
         elif current_main is not None:
-            if len(row['Area']) == 0:
-                continue
-            
-            for area, height in zip(row['Area'], row['hight']):
-                time_interval = row['TTT'] - current_main['main_ttt'] * 4.e-9 # 4ns                
+            # if len(row['Area']) == 0:
+            #     continue
+            areas = row['Area'] if isinstance(row['Area'], (list, tuple)) else [row['Area']]
+            heights = row['Hight'] if isinstance(row['Hight'], (list, tuple)) else [row['Hight']]
+
+            for area, height in zip(areas, heights):
+                time_interval = (row['TTT'] - current_main['main_ttt']) * 4  # 4ns
                 current_main['post_events'].append({
                     'delay': time_interval,
                     'area': area,
