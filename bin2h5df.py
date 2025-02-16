@@ -4,7 +4,7 @@ import runinfo as runinfo
 import pandas as pd
 from tqdm import tqdm
 import sys
-# import time
+import time
 import argparse
 import constant as c
 gain_2414 = c.gain_lv2414 
@@ -15,6 +15,7 @@ atten_12DB = c.attenuation_factor_12DB
 atten_18DB = c.attenuation_factor_18DB 
 atten_20DB = c.attenuation_factor_20DB 
 atten_0DB = 1.0
+
 
 def get_attenuation_factor(ch, runtype):
     if ch == 0:
@@ -127,15 +128,11 @@ def process_batch(file, runtype):
         ch = wave.Channel
         ttt = wave.Timestamp
         base = wave.Baseline
-        data = wave.Waveform        
-        pulses_indexs =process_data.detect_all_pulses(data,base)
-        area, hight, width = [], [], []
-        for pulse in pulses_indexs:
-            area_ = process_data.pulse_area(data, pulse[0], pulse[1], base)
-            area.append(area_)
-            hight.append(base - data[pulse[2]])
-            width.append(pulse[1] - pulse[0])
-        st,ed,md = pulse[0], pulse[1], pulse[2]
+        data = wave.Waveform  
+        st,ed,md =process_data.pulse_index(data)      
+        area= process_data.pulse_area(data, st, ed, base)
+        hight = base - data[md]
+        width = ed - st    
         winfo.append({
             'Ch':ch,
             'TTT':ttt,
@@ -145,12 +142,12 @@ def process_batch(file, runtype):
             'Width':width,
             'st':st,
             'ed':ed,
-            'md':md,
+            'md':md,            
             'RunType': runtype,            
             'Voltage': run_info['voltage'],
             'RunTag': run_info['run_tag'],
+            # 'Wave': data,            
             'Ftag': run_info['file_tag'],
-            'Wave': data,
         })
     file_tag = run_info['file_tag']
     print(file_tag)
@@ -170,6 +167,9 @@ def main():
             raise Exception("Invalid number of arguments.")
         if args.runtype not in ["TimeConstant", "LongS2", "Saturation", "Calibration", "DecayConstant", "others"]:
             raise Exception("Invalid runtype.")
+
+        start_time = time.time()
+
         runtype = args.runtype
         file_list = args.file_list
         print("Arguments parsed successfully.")
@@ -191,6 +191,11 @@ def main():
                 file.write(filename+'\n')
         print("Processed files saved to: ", output_file)
         
+        total_time = time.time() - start_time
+        minutes = int(total_time // 60)
+        seconds = int(total_time % 60)
+        print(f"\nTotal time: {minutes}m {seconds}s")
+        
     except Exception as e:
         print("An error occurred while parsing arguments:", str(e))
         print("Usagee: python bin2h5df.py --runtype Saturation / TimeConstant / LongS2 --file_list file_list.txt")
@@ -199,3 +204,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+    
+    
+
