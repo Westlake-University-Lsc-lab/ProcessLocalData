@@ -210,19 +210,20 @@ def cal_rms(data):
 '''
 find main pulse in segment data
 '''
-def find_main_pulse(segment, heigh_threshold=4000):
+def find_main_pulse(df, heigh_threshold=4000):
     """
     Main pulse detection algorithm
     """    
-    area = segment['Area']
-    height = segment['Hight']
+    area = df['Area']
+    height = df['Hight']
     
     # main pulse detection
     if  height > heigh_threshold:  # PE and ADC thresholds
         return {
-            'ttt': segment['TTT'],
+            'ttt': df['TTT'],
             'main_area': area,
             'main_height': height,
+            'main_width': df['Width']
         }
     return None
 '''
@@ -238,8 +239,8 @@ def process_all_segments(df, heigh_threshold):
     # Sort the dataframe by TTT
     df = df.sort_values('TTT')    
     for idx, row in df.iterrows():
-        # if row['Ch'] != 0:
-        #     continue
+        if row['Ch'] != 0:
+            continue
         if main_pulse := find_main_pulse(row, heigh_threshold):
             # Save the previous main pulse
             if current_main:
@@ -250,6 +251,7 @@ def process_all_segments(df, heigh_threshold):
                 'main_ttt': main_pulse['ttt'],
                 'main_area': main_pulse['main_area'],
                 'main_height': main_pulse['main_height'],
+                'main_width': main_pulse['main_width'],
                 'post_events': []
             }
         
@@ -273,3 +275,327 @@ def process_all_segments(df, heigh_threshold):
         results.append(current_main)
     
     return pd.DataFrame(results)
+
+def selection_main_pulse_0(df):
+    # 处理Ch==0的通道并按TTT排序
+    df_ch0 = df[df['Ch'] == 0].sort_values('TTT').reset_index(drop=True)
+    if df_ch0.empty:
+        return []
+    
+    # 定义主脉冲的周期（1秒对应的TTT单位）
+    pulse_period = 250_000_000  # 1秒 = 250000000 * 4ns
+    # error_margin = 1  # 允许的误差范围（±2个TTT单位，即±8ns）
+    
+    # 存储所有可能的主脉冲序列
+    candidate_sequences = []
+    
+    # 遍历所有数据点，寻找可能的主脉冲起点
+    # for start_idx in range(0, 10000):
+    for start_idx in range(len(df_ch0)):
+        current_sequence = [start_idx]
+        current_index = start_idx
+        
+        while True:
+            current_ttt = df_ch0.loc[current_index, 'TTT']
+            expected_next_ttt = current_ttt + pulse_period
+            
+            # 查找符合条件的候选
+            mask = (df_ch0['TTT'] >= expected_next_ttt ) & \
+                   (df_ch0['TTT'] <= expected_next_ttt )
+            candidates = df_ch0.index[mask].tolist()
+            candidates = [idx for idx in candidates if idx > current_index]
+            
+            if not candidates:
+                break  # 无后续候选，终止循环
+            
+            # 选择最接近的候选（若有多个，选最小的索引）
+            next_index = min(candidates)
+            current_sequence.append(next_index)
+            current_index = next_index
+        
+        # 如果找到的序列长度大于1，则作为候选序列
+        if len(current_sequence) > 1:
+            candidate_sequences.append(current_sequence)
+    
+    # 如果没有找到任何候选序列，返回空列表
+    if not candidate_sequences:
+        return []
+    
+    # 选择最长的候选序列作为主脉冲序列
+    main_pulses = max(candidate_sequences, key=len)
+    
+    # 构建输出结果
+    output = []
+    for i in range(len(main_pulses)):
+        main_idx = main_pulses[i]
+        main_data = df_ch0.loc[main_idx]
+        main_ttt = main_data['TTT']
+        
+        post_events = []
+        if i < len(main_pulses) - 1:
+            # 收集当前main_pulse到下一个main_pulse之间的事件
+            next_main_idx = main_pulses[i + 1]
+            post_indices = range(main_idx + 1, next_main_idx)
+        else:
+            post_indices = []  # 最后一个main_pulse不处理后续事件
+        
+        for idx in post_indices:
+            event = df_ch0.loc[idx]
+            delay = (event['TTT'] - main_ttt) * 4  # 转换为ns
+            post_events.append({
+                'delay': delay,
+                'area': event['Area'],
+                'height': event['Hight'],
+                'width': event['Width']
+            })
+        
+        output.append({
+            'main_ttt': main_ttt,
+            'main_area': main_data['Area'],
+            'main_height': main_data['Hight'],
+            'main_width': main_data['Width'],
+            'post_events': post_events
+        })
+    
+    return pd.DataFrame(output)
+
+# import pandas as pd
+# import numpy as np
+# import pandas as pd
+# import numpy as np
+
+def selection_main_pulse_1(df):
+    """
+    寻找 LED 主脉冲及其后续事件。
+    
+    参数:
+        df (pd.DataFrame): 输入数据，包含 ['Ch', 'TTT', 'Area'] 列。
+    
+    返回:
+        list: 包含主脉冲及其后续事件的列表。
+    """
+    # 1. 预处理：筛选通道并排序
+    df_ch0 = df[df['Ch'] == 0].sort_values('TTT').reset_index(drop=True)
+    if df_ch0.empty:
+        return []
+    
+    # 2. 定义常量
+    TTT_UNIT = 4  # 1 TTT 单位 = 4ns
+    PULSE_PERIOD = 250_000_000  # 1秒对应的 TTT 单位 (1e9 / 4 = 250e6)
+    WINDOW_SIZE = 60 * PULSE_PERIOD  # 1分钟时间窗口（60秒）
+    
+    # 3. 将 TTT 转换为 numpy 数组以便快速操作
+    ttt_array = df_ch0['TTT'].values
+    area_array = df_ch0['Area'].values
+    
+    # 4. 寻找主脉冲序列
+    main_pulses = []
+    for i in range(len(ttt_array)):
+        # 检查当前时间窗口是否在 1 分钟内
+        if i > 0 and ttt_array[i] - ttt_array[0] > WINDOW_SIZE:
+            break
+        
+        # 尝试以当前点为起点，寻找符合周期的主脉冲序列
+        current_sequence = [i]
+        current_ttt = ttt_array[i]
+        
+        # 向后查找符合周期的主脉冲
+        for j in range(i + 1, len(ttt_array)):
+            expected_ttt = current_ttt + PULSE_PERIOD
+            if abs(ttt_array[j] - expected_ttt) <= 2:  # 允许 ±8ns 误差
+                current_sequence.append(j)
+                current_ttt = ttt_array[j]
+        
+        # 如果找到符合条件的主脉冲序列，保存并退出
+        if len(current_sequence) >= 2:  # 至少有两个脉冲
+            main_pulses = current_sequence
+            break
+    
+    # 5. 如果没有找到主脉冲序列，返回空列表
+    if not main_pulses:
+        return []
+    
+    # 6. 标记主脉冲和后续事件
+    output = []
+    for i in range(len(main_pulses)):
+        main_idx = main_pulses[i]
+        main_ttt = ttt_array[main_idx]
+        main_area = area_array[main_idx]
+        
+        # 确定后续事件范围
+        if i < len(main_pulses) - 1:
+            next_main_idx = main_pulses[i + 1]
+            post_indices = range(main_idx + 1, next_main_idx)
+        else:
+            post_indices = range(main_idx + 1, len(ttt_array))
+        
+        # 收集后续事件
+        post_events = []
+        for idx in post_indices:
+            delay = (ttt_array[idx] - main_ttt) * TTT_UNIT  # 转换为 ns
+            post_events.append({
+                'delay': int(delay),
+                'area': area_array[idx]
+            })
+        
+        # 添加到输出结果
+        output.append({
+            'main_ttt': int(main_ttt),
+            'main_area': main_area,
+            'post_events': post_events
+        })
+    
+    return pd.DataFrame(output)
+
+
+def find_periodic_elements(arr, step, known_value):
+    """
+    args:
+        arr (list): 输入的数组。
+        step (int): 步长（周期）。
+        known_value: 已知的数组中的一个元素值。
+    
+    return:
+        list: 符合步长条件的元素列表。
+    """
+    # 构建哈希表：值 -> 索引
+    value_to_indices = {}
+    for idx, value in enumerate(arr):
+        print(idx, value)
+        if value not in value_to_indices:
+            value_to_indices[value] = []
+        value_to_indices[value].append(idx)
+    
+    # 如果已知值不在数组中，返回空列表
+    if known_value not in value_to_indices:
+        return []
+    
+    result = []
+    
+    # 从已知值开始，向前和向后查找符合步长的元素
+    for start_idx in value_to_indices[known_value]:
+        # 向前查找
+        print('to left---------------')        
+        current_idx = start_idx
+        while current_idx >= 0:
+            result.append(arr[current_idx])
+            current_idx -= step
+        print('to right---------------')
+        # 向后查找
+        current_idx = start_idx + step
+        while current_idx < len(arr):
+            result.append(arr[current_idx])
+            current_idx += step
+    
+    # 去重并返回结果
+    return list(set(result))
+
+import numpy as np
+
+def find_periodic_elements_optimized(arr, step, known_value):
+    """
+    优化版：直接操作 numpy.ndarray，避免转换为 list。
+    """
+    # 如果输入不是 numpy.ndarray，转换为 numpy.ndarray
+    if not isinstance(arr, np.ndarray):
+        arr = np.array(arr)
+    
+    # 找到已知值的所有索引
+    known_indices = np.where(arr == known_value)[0]
+    
+    # 如果已知值不在数组中，返回空列表
+    if len(known_indices) == 0:
+        return []
+    
+    # 初始化结果集合
+    result = set()
+    
+    # 从已知值开始，向前和向后查找符合步长的元素
+    for start_idx in known_indices:
+        # 向前查找
+        current_idx = start_idx
+        while current_idx >= 0:
+            result.add(arr[current_idx])
+            current_idx -= step
+        
+        # 向后查找
+        current_idx = start_idx + step
+        while current_idx < len(arr):
+            result.add(arr[current_idx])
+            current_idx += step
+    
+    # 返回结果列表
+    return list(result)
+
+
+def selection_main_pulse(df):
+    # 预处理：筛选通道并排序
+    df_ch0 = df[df['Ch'] == 0].sort_values('TTT').reset_index(drop=True)
+    if df_ch0.empty:
+        return []
+    
+    # 定义常量
+    TTT_UNIT = 4  # 1 TTT单位=4ns
+    PULSE_PERIOD = 250_000_000  # 1秒对应的TTT单位 (1e9 / 4 = 250e6)
+    
+    # 获取最大Area的脉冲作为起始点
+    max_area_idx = df_ch0['Area'].idxmax()
+    main_ttt = df_ch0.at[max_area_idx, 'TTT']
+    
+    print(r'main_pulse area:{}, ttt:{}'.format(max_area_idx, main_ttt))
+    # 构建TTT数组用于快速搜索
+    ttt_array = df_ch0['TTT'].values
+    # indices = np.arange(len(ttt_array))
+    main_ttts = find_periodic_elements(ttt_array, PULSE_PERIOD, main_ttt)
+    
+    print(r'found {} main_pulse ttt(s)'.format(len(main_ttts)))
+    print(r'main_pulse rate:{}Hz'.format(len(main_ttts) /  ((df.TTT.max() - df.TTT.min()) *4.E-9 )))
+                      
+                       
+    # 验证脉冲间隔误差
+    valid_main_ttts = []
+    for i in range(1, len(main_ttts)):
+        delta = main_ttts[i] - main_ttts[i-1]
+        if abs(delta - PULSE_PERIOD) == 0:
+            valid_main_ttts.extend([main_ttts[i-1], main_ttts[i]])
+        else:
+            print(r'Warning: invalid pulse interval: {}ns'.format(delta))            
+    valid_main_ttts = sorted(list(set(valid_main_ttts)))
+    
+    # 构建输出结构
+    output = []
+    ttt_to_index = {ttt: idx for idx, ttt in enumerate(ttt_array)}
+    for i in range(len(valid_main_ttts)):
+        main_ttt = valid_main_ttts[i]
+        main_idx = ttt_to_index[main_ttt]
+        main_data = df_ch0.iloc[main_idx]
+        
+        # 确定post_events范围
+        next_main_ttt = valid_main_ttts[i+1] if i+1 < len(valid_main_ttts) else None
+        if next_main_ttt:
+            end_idx = ttt_to_index[next_main_ttt]
+            post_indices = range(main_idx+1, end_idx)
+        else:
+            post_indices = []
+        
+        # 收集post_events
+        post_events = []
+        for idx in post_indices:
+            event = df_ch0.iloc[idx]
+            delay = (event['TTT'] - main_ttt) * TTT_UNIT
+            post_events.append({
+                'delay': int(delay),
+                'area': event['Area'],
+                'height': event['Hight'],
+                'width': event['Width']
+            })
+        
+        output.append({
+            'main_ttt': int(main_ttt),
+            'main_area': main_data['Area'],
+            'main_height': main_data['Hight'],
+            'main_width': main_data['Width'],
+            'post_events': post_events
+        })
+    result =pd.DataFrame(output)
+    return result
