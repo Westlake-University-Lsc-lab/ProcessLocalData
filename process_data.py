@@ -106,7 +106,7 @@ def detect_all_pulses(data, base):
         if validate_pulse(start, end, hight, 20.0) is True:
             pulses.append((start, end, min_idx, hight))
     return pulses
-
+#######################################################################
 '''
 old version of pulse finding algorithm
 '''
@@ -150,7 +150,7 @@ def find_waveform_intersections(waveform, baseline, negative_pulse=True, percent
     max_index = crossings[-1]
     return peak_index, min_index, max_index
 
-
+###########################################################################
 '''
 function to calculate area of pulse
 '''
@@ -206,7 +206,7 @@ def cal_rms(data):
     rms = math.sqrt(average_squared)
     return rms
 
-
+############################################################################
 '''
 find main pulse in segment data
 '''
@@ -276,6 +276,67 @@ def process_all_segments(df, heigh_threshold):
     
     return pd.DataFrame(results)
 
+###############################################################################
+def read_txt_to_dataframe(file_path: str, runtype: str = 'Decay') -> pd.DataFrame:
+    """
+    reading TXT file to pandas DataFrame
+
+    param：
+    file_path (str) : txt file path
+
+    return：
+    pd.DataFrame : data including X and Y columns
+
+    error:
+    - FileNotFoundError: file not found
+    - ValueError: axis identifier error or data type error
+    - RuntimeError: data type error
+    """
+    X = []
+    Y = []
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            for _ in range(3):
+                next(file)
+
+            header_line = file.readline().strip()
+            if header_line.replace('\t', ' ') != "X Y":
+                raise ValueError(f"axis identifier error: should be 'X Y'，actual is '{header_line}'")
+            
+            for line_number, line in enumerate(file, start=5):  
+                line = line.strip()
+                if not line:
+                    continue  # skip empty line
+                if line == "</Trace>":  # end of trace
+                    print(f"checking end of trace '</Trace>'，stop reading.")
+                    break
+                parts = line.split()                
+                if len(parts) != 2:
+                    raise RuntimeError(f"number {line_number} line data type error: shoulde be 2，actual is {len(parts)}")
+
+                try:
+                    if runtype == 'Spectrum':
+                        x_val = int(parts[0])
+                        y_val = float(parts[1])
+                    elif runtype == 'Decay':
+                        x_val = float(parts[0])
+                        y_val = int(parts[1])
+                    
+                    else:
+                        raise ValueError(f"unkown runtype: {runtype}")
+                    # print(x_val, y_val)
+                except ValueError as e:
+                    raise RuntimeError(f"number {line_number} line data type error: {e}")
+                X.append(x_val)
+                Y.append(y_val)
+
+    except FileNotFoundError:
+        raise FileNotFoundError(f"file {file_path} not found") from None
+
+    return pd.DataFrame({'X': X, 'Y': Y})
+
+##########################################################################################
 def selection_main_pulse_0(df):
     # 处理Ch==0的通道并按TTT排序
     df_ch0 = df[df['Ch'] == 0].sort_values('TTT').reset_index(drop=True)

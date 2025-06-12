@@ -1,8 +1,58 @@
-
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import fit_package 
+
+   
+def read_file_names(file_list_path):
+    flist = []
+    with open(file_list_path, 'r') as file:
+        for line in file:
+            rawfilename = line.rstrip('\n')  
+            flist.append(rawfilename)  
+            print(rawfilename)
+    return flist
+
+def merge_files(flist):
+    all_data = pd.DataFrame()
+    for file_path in flist:
+        df_ = pd.read_hdf(file_path, key='winfo')
+        if all_data.empty:
+            all_data = df_.copy()  # 首次直接赋值
+        else:
+            try:
+                all_data = pd.concat([all_data, df_], ignore_index=True)
+            except ValueError as e:
+                print(f"合并失败：文件 {file_path} 结构不一致")
+                raise e
+    return all_data
+
+
+def Area_ratio(df):
+    area_ratio = []
+    area_ratio_err = []
+
+    # 遍历每两个相邻的行
+    for i in range(0, len(df) - 1, 2):
+        area_0 = df.loc[i, 'area_mu']
+        area_1 = df.loc[i+1, 'area_mu']
+        err_0 = df.loc[i, 'area_err']
+        err_1 = df.loc[i+1, 'area_err']
+
+        # 取较小值除以较大值
+        if area_0 <= area_1:
+            ratio = area_0 / area_1
+            # 误差传递
+            ratio_err = ratio * np.sqrt((err_0 / area_0) ** 2 + (err_1 / area_1) ** 2)
+        else:
+            ratio = area_1 / area_0
+            ratio_err = ratio * np.sqrt((err_1 / area_1) ** 2 + (err_0 / area_0) ** 2)
+
+        area_ratio.append(ratio*100)
+        area_ratio_err.append(ratio_err*100)
+        print(ratio*100, ratio_err*100)
+    return area_ratio, area_ratio_err
 
 def plot_waveform(wave, baseline,  xmin=0, xmax=150, ttt=888, area=100, pmt='LV2414',  ch='Anode', Save=False, file_tag='20240830_LED_run', title='LED Ch0 Waveform'):
     plt.figure()
@@ -32,8 +82,8 @@ def plot_fit_histgram_vs_Gaussion(array, nbins, left_edge, right_edge, p0=[1.e4,
     popt, _ = curve_fit(fit_package.gaussian, bins, hist, p0=p0)
     x_fit = np.linspace(np.min(bins), np.max(bins), 1000)
     y_fit = fit_package.gaussian(x_fit, *popt)
-    plt.plot(x_fit, y_fit, label=r'$\mu$={:.2f}, $\sigma$={:.2f}'.format(popt[1], popt[2]))
-    plt.hist(array, bins=nbins, range=(left_edge, right_edge),  color='black', density=False, alpha=0.5, label=xlabel)
+    plt.plot(x_fit, y_fit, color='red', label=r'$\mu$={:.2f}, $\sigma$={:.2f}'.format(popt[1], popt[2]))
+    plt.hist(array, bins=nbins, range=(left_edge, right_edge),  color='black', density=False, alpha=0.5, label=title)
     plt.xlabel(r'{} '.format(xlabel))
     plt.ylabel('Entries')
     plt.title(r'{} {}'.format(file_tag, title))
