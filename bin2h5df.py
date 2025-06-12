@@ -29,6 +29,8 @@ def get_attenuation_factor(ch, runtype):
             return atten_0DB     
         elif runtype == "DecayConstant":
             return atten_0DB
+        elif runtype == "DarkRate":
+            return atten_0DB
         elif runtype == "others":
             return atten_0DB
         else:
@@ -45,6 +47,8 @@ def get_attenuation_factor(ch, runtype):
             return atten_0DB
         elif runtype == "DecayConstant":
             return atten_0DB
+        elif runtype == "DarkRate":
+            return atten_0DB        
         elif runtype == "others":
             return atten_0DB
         else:
@@ -129,26 +133,44 @@ def process_batch(file, runtype):
         ttt = wave.Timestamp
         base = wave.Baseline
         data = wave.Waveform  
+        wlen = len(data)
         st,ed,md =process_data.pulse_index(data)      
         area= process_data.pulse_area(data, st, ed, base)
         hight = base - data[md]
         width = ed - st    
-        winfo.append({
-            'Ch':ch,
-            'TTT':ttt,
-            'Baseline': base, 
-            'Area':area,
-            'Hight':hight,
-            'Width':width,
-            'st':st,
-            'ed':ed,
-            'md':md,            
-            'RunType': runtype,            
-            'Voltage': run_info['voltage'],
-            'RunTag': run_info['run_tag'],
-            # 'Wave': data,            
-            'Ftag': run_info['file_tag'],
-        })
+        if runtype != 'DarkRate': 
+            winfo.append({
+                'Ch':ch,
+                'TTT':ttt,
+                'Baseline': base, 
+                'Area':area,
+                'Hight':hight,
+                'Width':width,
+                'st':st,
+                'ed':ed,
+                'md':md,           
+                'RunType': runtype,               
+                'Voltage': run_info['voltage'],
+                'RunTag': run_info['run_tag'],
+                # 'Wave': data,            
+                'Ftag': run_info['file_tag'],
+            })
+        elif runtype == 'DarkRate':
+            winfo.append({
+                'Ch':ch,
+                'TTT':ttt,
+                'Baseline': base, 
+                'Area':area,
+                'Hight':hight,
+                'Width':width,
+                'st':st,
+                'ed':ed,
+                'md':md,  
+                'Wlen':wlen,           
+                'RunType': runtype,               
+                'Ftag': run_info['file_tag'],
+                'Wave': data,  
+            })
     file_tag = run_info['file_tag']
     print(file_tag)
     path_save = "outnpy/{}.h5py".format(file_tag)
@@ -165,7 +187,7 @@ def main():
         args = parser.parse_args()
         if len(vars(args)) != 2:
             raise Exception("Invalid number of arguments.")
-        if args.runtype not in ["TimeConstant", "LongS2", "Saturation", "Calibration", "DecayConstant", "others"]:
+        if args.runtype not in ["TimeConstant", "LongS2", "Saturation", "Calibration", "DecayConstant", "DarkRate","others"]:
             raise Exception("Invalid runtype.")
 
         start_time = time.time()

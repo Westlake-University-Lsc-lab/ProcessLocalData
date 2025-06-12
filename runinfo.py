@@ -10,8 +10,13 @@ def determine_runtype(run_file):
         runtype = 'LongS2'
     elif 'DecayConstant' in run_file:
         runtype = 'DecayConstant'
+    elif 'darkrate' in run_file:
+        runtype = 'DarkRate'
+    elif 'self' in run_file:
+        runtype = 'DarkRate'
     else:
         runtype = 'others'
+    print(runtype)
     return runtype
 
 def find_date(s):
@@ -24,7 +29,7 @@ def find_date(s):
                 date_part = s[index : shifted_index]
                 date = date_part
                 break  
-    # print(date)
+    print(date)
     return date
 
 def find_deta_t(s, runtype):
@@ -105,6 +110,8 @@ def check_trigger_mode(runtype):
         trigger_mode = 'External'
     elif runtype == 'DecayConstant':
         trigger_mode = 'Self'
+    elif runtype == 'DarkRate':
+        trigger_mode = 'Self'
     else:
         trigger_mode = 'Unknown'
     return trigger_mode
@@ -114,18 +121,24 @@ def parse_run_info(rawfilename, runtype):
     # runtype = determine_runtype(rawfilename)
     run_info = []
     date = find_date(rawfilename)
-    volate = find_voltage(rawfilename, runtype)
-    delta_t =  find_deta_t(rawfilename, runtype)
-    trig_rate = find_trig_rate(rawfilename, runtype)
-    run_tag = find_run_tag(rawfilename, runtype)
     file_tag = find_file_tag(rawfilename, runtype)
-    run_info = [{
-        'date': date,
-        'voltage': volate,
-        'delta_t': delta_t,
-        'trig_rate': trig_rate,
-        'run_tag': run_tag,
-        'file_tag': file_tag
-    }]
+    if runtype != 'DarkRate':
+        volate = find_voltage(rawfilename, runtype)
+        delta_t =  find_deta_t(rawfilename, runtype)
+        trig_rate = find_trig_rate(rawfilename, runtype)
+        run_tag = find_run_tag(rawfilename, runtype)       
+        run_info = [{
+            'date': date,
+            'voltage': volate,
+            'delta_t': delta_t,
+            'trig_rate': trig_rate,
+            'run_tag': run_tag,
+            'file_tag': file_tag
+        }]
+    elif runtype == 'DarkRate':
+        run_info = [{
+            'date': date,
+            'file_tag': file_tag
+        }]
     return run_info
  
