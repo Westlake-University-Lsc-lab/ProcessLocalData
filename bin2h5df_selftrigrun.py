@@ -32,8 +32,8 @@ def process_batch(file, runtype):
         std = np.std(data[:10])
         # rms = np.sqrt(np.mean(np.square(data[:20])))
         st,ed,md =process_data.pulse_index(data)      
-        area= process_data.pulse_area(data, st, ed, base)        
-        # area= process_data.pulse_area(data, 85, 150, base)        
+        # area= process_data.pulse_area(data, st, ed, base)        
+        area= process_data.pulse_area(data, 100, 125, base)        
         hight = base - data[md]
         width = ed - st 
         # rfhight = base - np.min(data[md+3:md+20])
