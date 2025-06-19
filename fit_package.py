@@ -130,3 +130,16 @@ def landau_fit(xdata, location, scale, A):
 def gaussian(x, a, mu, sigma):
     return a * np.exp(-(x - mu)**2 / (2 * sigma**2))
 
+
+
+def three_gauss(x, A0, mu0, sigma0, A1, mu1, sigma1, A2):
+    """
+    三高斯叠加函数：
+    - Pedestal（噪声基底）: 高斯1 (A0, mu0, sigma0)
+    - 单光电子峰（SPE）: 高斯2 (A1, mu1, sigma1)
+    - 双光电子峰（DPE）: 高斯3 (A2, 2*mu1, sigma2)
+    """
+    gauss_pedestal = A0 * np.exp(-(x - mu0)**2 / (2 * sigma0**2))
+    gauss_spe = A1 * np.exp(-(x - mu1-mu0)**2 / (2 * ( sigma1**2 + sigma0**2 )) ) 
+    gauss_dpe = A2 * np.exp(-(x - 2*mu1 - mu0 )**2 / (2 *(2*sigma1**2 + sigma0**2)))
+    return gauss_pedestal + gauss_spe + gauss_dpe
