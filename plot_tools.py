@@ -165,7 +165,8 @@ def plot_2d_histogram(x_series, y_series,
                      colorbar_label="频数密度",
                      edgecolor='white',
                      return_data=False,
-                     save_path=None):
+                     save_path=None,
+                     log_z=False):
     """
     绘制二维直方图（热力图）
 
@@ -227,6 +228,13 @@ def plot_2d_histogram(x_series, y_series,
         range=[x_range, y_range],
         density=density
     )
+    # 对数变换处理
+    if log_z:
+        # 避免log(0)，加一个极小正数
+        counts = np.where(counts > 0, counts, 1e-10)
+        counts = np.log10(counts)
+        # 修改颜色条标签，提示是对数刻度
+        colorbar_label = "log10(" + colorbar_label + ")"
     
     # # 颜色映射
     # default_colors = ["#F0F9E8", "#BAE4BC", "#7BCCC4", "#43A2CA", "#0868AC"]
