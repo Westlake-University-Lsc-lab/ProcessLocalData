@@ -35,27 +35,27 @@ def process_batch(file, runtype):
         area= process_data.pulse_area(data, st, ed, base)        
         # area= process_data.pulse_area(data, 110, 120, base)        
         hight = base - data[md]
-        width = ed - st 
+        # width = ed - st 
         # rfhight = base - np.min(data[md+3:md+20])
-        asys = (base - np.min(data))/(np.max(data) - np.min(data))
-        rfovhight = base - np.max(data[md:md+20])
+        # asys = (base - np.min(data))/(np.max(data) - np.min(data))
+        # rfovhight = base - np.max(data[md:md+20])
         if runtype == 'DarkRate':
             winfo.append({
                 'Ch':ch,
                 'TTT':ttt,
                 'Baseline': base, 
                 # 'RMS':rms,
-                'STD':std,
+                # 'STD':std,
                 'Area':area,
                 'Hight':hight,
-                'Width':width,   
-                'Asys':asys,             
-                'st':st,
-                'ed':ed,
-                'md':md, 
+                # 'Width':width,   
+                # 'Asys':asys,             
+                # 'st':st,
+                # 'ed':ed,
+                # 'md':md, 
                 'WLen':wlen,
                 # 'RFHight' : rfhight,
-                'RFOvhight': rfovhight,
+                # 'RFOvhight': rfovhight,
                 'RunType': runtype,               
                 'Ftag': file_tag,
                 'Wave': data,  
