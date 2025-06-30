@@ -4,109 +4,7 @@ import daw_readout
 import time
 import os
 
-'''
-find a pulse in segment, and return the start, end, peak index of the pulse
-'''
-def smooth_data(data, window_size=3):
-    return np.convolve(data, np.ones(window_size)/window_size, mode='same')
-
-def find_local_minima(data, window=3):
-    minima = []
-    for i in range(window, len(data)-window):
-        if data[i] == np.min(data[i-window:i+window]):
-            minima.append(i)
-    return minima
-def estimate_baseline(data, head_ratio=0.1, tail_ratio=0.1):
-    head_samples = data[:int(len(data)*head_ratio)]
-    tail_samples = data[-int(len(data)*tail_ratio):]
-    return np.mean(np.concatenate([head_samples, tail_samples]))
-
-def validate_pulse(
-    start: int,
-    end: int, 
-    hight: int,
-    threshold: float
-) -> bool:
-    """Validate if a pulse meets criteria.    
-    Args:
-        start (int): Pulse start index
-        end (int): Pulse end index
-        hight (int): Pulse height (amplitude)
-        threshold (float): Minimum amplitude threshold
-    
-    Returns:
-        bool: 
-            - True if both conditions are met: 
-                1. pulse_width >= 0 
-                2. hight >= threshold
-            - False otherwise
-    """
-    # Check if pulse duration is valid
-    pulse_width = end - start + 1
-    if pulse_width < 0:
-        return False
-    
-    # Check if amplitude meets threshold
-    if hight < threshold:
-        return False
-        
-    # Both conditions satisfied
-    return True
-
-def pulse_hight(
-    start: int, 
-    end: int, 
-    data: np.ndarray,
-    baseline:int,
-    ):
-    """    
-    Args:
-        start (int): pulse start index
-        end (int): pulse end index
-        data (np.ndarray): pulse data
-        baseline (int): pulse baseline
-    
-    Returns:
-        float: pulse height
-    """
-    # calculate amplitude of pulse
-    pulse_segment = data[start: end + 1]
-    peak_value = np.max(pulse_segment) if abs(np.max(pulse_segment) - baseline) > abs(np.min(pulse_segment) - baseline) else np.min(pulse_segment)
-    amplitude = abs(peak_value - baseline)
-    return amplitude
-
-def improved_pulse_index(data, min_idx, baseline):   
-    threshold_ratio = 0.1  
-    gradient_threshold = 0.5  
-    # baseline = estimate_baseline(data)   
-    start_index = min_idx
-    while start_index > 0:
-        delta = data[start_index] - baseline
-        grad = data[start_index] - data[start_index-1]
-        if delta > threshold_ratio * (baseline - min_idx) or grad > gradient_threshold:
-            break
-        start_index -= 1         
-    end_index = min_idx
-    while end_index < len(data)-1 :
-        delta = data[end_index] - baseline
-        grad = data[end_index] - data[end_index+1]
-        if delta > threshold_ratio * (baseline - min_idx) or grad > gradient_threshold:
-            break
-        end_index += 1 
-    start_index = max(0, start_index)
-    end_index = min(len(data)-1, end_index)    
-    return start_index,  end_index
-    
-def detect_all_pulses(data, base):
-    pulses = []
-    local_minima = find_local_minima(data)
-    for min_idx in local_minima:
-        start,  end = improved_pulse_index(data, min_idx, base)
-        hight = pulse_hight(start, end, data, base)
-        if validate_pulse(start, end, hight, 20.0) is True:
-            pulses.append((start, end, min_idx, hight))
-    return pulses
-#######################################################################
+##--------------------------------------------------
 '''
 old version of pulse finding algorithm
 '''
@@ -276,21 +174,232 @@ def process_all_segments(df, heigh_threshold):
     
     return pd.DataFrame(results)
 
-###############################################################################
-def read_txt_to_dataframe(file_path: str, runtype: str = 'Decay') -> pd.DataFrame:
+##################################################################################
+###afterpulse finding algorithm
+##################################################################################
+import logging
+
+def findpulse_st_ed(waveform_data: np.ndarray, baseline: int, referencePoint: int):
     """
-    reading TXT file to pandas DataFrame
+    find the start, min, end index of pulse
+    Args:
+        waveform_data (np.ndarray): segment waveform data
+        baseline (int): baseline of the segment
+        referencePoint (int): reference point which over 20 adc in segment
 
-    param：
-    file_path (str) : txt file path
+    Returns:
+        find the start, min, end index of referencePoint pulse, [-5, 15] window from referencePoint
+    """
+    
+    start_range = max(0, referencePoint - 5)
+    end_range = min(len(waveform_data), referencePoint + 15)
 
-    return：
-    pd.DataFrame : data including X and Y columns
+    min_index = referencePoint
+    min_value = waveform_data[referencePoint]
+    for i in range(start_range, end_range):
+        if waveform_data[i] < min_value:
+            min_value = waveform_data[i]
+            min_index = i
 
-    error:
-    - FileNotFoundError: file not found
-    - ValueError: axis identifier error or data type error
-    - RuntimeError: data type error
+    start_index = min_index
+    while start_index > start_range:
+        if (waveform_data[start_index] - waveform_data[start_index - 1]) < 0:
+            start_index -= 1
+        else:
+            break
+
+    end_index = min_index
+    if end_index + 1 < end_range and waveform_data[min_index] == waveform_data[end_index + 1]:
+        end_index += 1
+
+    while end_index + 1 < end_range:
+        if (waveform_data[end_index + 1] - waveform_data[end_index]) > 0:
+            end_index += 1
+        else:
+            break
+
+    return start_index, min_index, end_index
+###-----------------------------------------------------------
+
+def cal_area(waveform_data, st: int, ed: int, baseline: int):
+    sum_val = np.sum(waveform_data[st: ed])
+    area = baseline * (ed - st) - sum_val
+    pe_fact = (2./16384)*4.e-9/(50*1.6e-19)/1.e6  # 转换系数
+    return area * pe_fact
+
+def filter_points(points, min_interval):
+    filtered = []
+    last_idx = None
+    for idx in points:
+        if last_idx is None or idx - last_idx >= min_interval:
+            filtered.append(idx)
+            last_idx = idx
+    return filtered
+
+def filter_after_pulses(df_after_pulse, min_interval=10):
+    """
+    过滤 after_pulse DataFrame 中 start 时间点间隔小于 min_interval 的行。
+    如果两个 start 时间点间隔小于 min_interval，则滤除后一个时间点对应的行。
+    
+    参数:
+        df_after_pulse: pandas.DataFrame，必须包含 'start' 列，且为数值类型。
+        min_interval: int，最小间隔阈值，单位为样本数。
+    
+    返回:
+        过滤后的 DataFrame。
+    """
+    # 先按 start 排序，确保顺序正确
+    df_sorted = df_after_pulse.sort_values('start').reset_index(drop=True)
+    
+    # 用一个布尔列表标记哪些行保留，初始都保留
+    keep = [True] * len(df_sorted)
+    
+    for i in range(1, len(df_sorted)):
+        # 计算当前start与前一个start的差值
+        diff = df_sorted.loc[i, 'start'] - df_sorted.loc[i-1, 'start']
+        if diff < min_interval:
+            # 间隔小于阈值，滤除当前行（i）
+            keep[i] = False
+    
+    # 返回过滤后的 DataFrame
+    return df_sorted[keep].reset_index(drop=True)
+
+def filter_all_segments(df_after_pulse, min_interval=10):
+    filtered_segments = []
+    for segment_id, group_df in df_after_pulse.groupby('segment'):
+        filtered_df = filter_after_pulses(group_df, min_interval)
+        filtered_segments.append(filtered_df)
+    # 合并所有过滤后的segment
+    result_df = pd.concat(filtered_segments, ignore_index=True)
+    return result_df
+####----------------------------------------------------------------
+
+def afterpulse_scan_segments(
+    segments_waveforms: list,
+    baselines: list,
+    threshold: int = 20,
+    main_pulse_height_threshold: int = 5000,
+):
+    """
+    处理多个segment波形，识别每个segment的主脉冲和后脉冲。    
+    参数:
+        segments_waveforms: list of np.ndarray，每个元素为一个segment的波形数据
+        baselines: list of int，每个segment对应的基线电平
+        threshold: 触发阈值
+        main_pulse_height_threshold: 主脉冲高度阈值
+    
+    返回:
+        pd.DataFrame，包含所有segment的脉冲信息
+    """
+    all_pulses = []
+
+    for seg_idx, (waveform_data, baseline) in enumerate(zip(segments_waveforms, baselines)):
+        ReferencePoints = []
+        above_threshold = False
+        for i in range(len(waveform_data)):
+            if baseline - waveform_data[i] > threshold:
+                if not above_threshold:
+                    ReferencePoints.append(i)
+                    above_threshold = True
+            else:
+                above_threshold = False
+
+        if not ReferencePoints:
+            logging.info(f"Segment {seg_idx} 无过阈脉冲")
+            continue
+        
+        # 新增：过滤ReferencePoints，剔除相邻触发点间隔小于3的点
+        ReferencePoints = filter_points(ReferencePoints, 10)
+        
+        main_pulse_found = False
+        main_pulse_info = None
+        pulse_idx_in_segment = 0
+        
+        after_pulses_in_segment = []
+
+        for ref_idx in ReferencePoints:
+            try:
+                st, minp, ed = findpulse_st_ed(waveform_data, baseline, ref_idx)
+            except Exception as e:
+                logging.warning(f"findpulse_st_ed error at segment {seg_idx}, ref_idx {ref_idx}: {e}")
+                continue
+
+            pulse_height = baseline - waveform_data[minp]
+            if pulse_height < threshold:
+                logging.warning(f"Pulse min point below threshold at segment {seg_idx}, index {minp}")
+                continue
+            if ed < st:
+                logging.warning(f"Pulse start/end error at segment {seg_idx}: start={st}, end={ed}")
+                continue
+
+            area = cal_area(waveform_data, st, ed, baseline)
+
+            if (not main_pulse_found) and (pulse_height > main_pulse_height_threshold):
+                # 标记为主脉冲
+                main_pulse_found = True
+                main_pulse_info = {
+                    'segment': seg_idx,
+                    'pulse_index': 0,
+                    'start': st,
+                    'width': ed - st,
+                    'height': pulse_height,
+                    'min_point': minp,
+                    'area': area,
+                }
+                all_pulses.append(main_pulse_info)
+                pulse_idx_in_segment = 1
+            else:
+                # 后脉冲，必须先找到主脉冲
+                if not main_pulse_found:
+                    # 如果还没找到主脉冲，跳过后脉冲
+                    continue
+
+                time_interval_start = st - main_pulse_info['start']
+                time_interval_min_point = minp - main_pulse_info['min_point']
+                
+                if (time_interval_start >= 50):
+                    after_pulse_info = {
+                        'segment': seg_idx,
+                        'pulse_index': pulse_idx_in_segment,
+                        'start': st,
+                        'width': ed - st,
+                        'height': pulse_height,
+                        'min_point': minp,
+                        'area': area,
+                        'time_interval_start': time_interval_start,
+                        'time_interval_min_point': time_interval_min_point,
+                    }                                                           
+                    after_pulses_in_segment.append(after_pulse_info)                                       
+                    pulse_idx_in_segment += 1
+                else:
+                    # logging.warning(f"Pulse too close to main pulse at segment {seg_idx}, index {minp}")
+                    continue
+
+        all_pulses.extend(after_pulses_in_segment)
+        
+        if not main_pulse_found:
+            logging.warning(f"Segment {seg_idx} 未找到主脉冲（height > {main_pulse_height_threshold}）")
+
+    df = pd.DataFrame(all_pulses)
+    return df
+####-----------------------------------------
+
+
+###############################################################################
+def read_txt_to_dataframe(file_path: str, runtype: str = 'Decay'):
+    """
+        reading TXT file to pandas DataFrame
+
+        param：
+        file_path (str) : txt file path
+
+        return：
+        pd.DataFrame : data including X and Y columns
+
+        error:
+        - FileNotFoundError: file not found
+        - ValueError: axis identifier error or data type error
+        - RuntimeError: data type error
     """
     X = []
     Y = []
@@ -419,19 +528,12 @@ def selection_main_pulse_0(df):
         })
     
     return pd.DataFrame(output)
-
-# import pandas as pd
-# import numpy as np
-# import pandas as pd
-# import numpy as np
-
+###-------------------------------------------
 def selection_main_pulse_1(df):
     """
-    寻找 LED 主脉冲及其后续事件。
-    
+    寻找 LED 主脉冲及其后续事件。    
     参数:
-        df (pd.DataFrame): 输入数据，包含 ['Ch', 'TTT', 'Area'] 列。
-    
+        df (pd.DataFrame): 输入数据，包含 ['Ch', 'TTT', 'Area'] 列。    
     返回:
         list: 包含主脉冲及其后续事件的列表。
     """
@@ -507,7 +609,7 @@ def selection_main_pulse_1(df):
         })
     
     return pd.DataFrame(output)
-
+###-----------------------
 
 def find_periodic_elements(arr, step, known_value):
     """
@@ -529,8 +631,7 @@ def find_periodic_elements(arr, step, known_value):
     
     # 如果已知值不在数组中，返回空列表
     if known_value not in value_to_indices:
-        return []
-    
+        return []    
     result = []
     
     # 从已知值开始，向前和向后查找符合步长的元素
@@ -551,8 +652,7 @@ def find_periodic_elements(arr, step, known_value):
     # 去重并返回结果
     return list(set(result))
 
-import numpy as np
-
+##############---------------------------
 def find_periodic_elements_optimized(arr, step, known_value):
     """
     优化版：直接操作 numpy.ndarray，避免转换为 list。
