@@ -320,15 +320,15 @@ def afterpulse_scan_segments(
             try:
                 st, minp, ed = pulse_index(waveform_data, baseline, 0.01, 7)
             except Exception as e:
-                logging.warning(f"findpulse_st_ed error at segment {seg_idx}, ref_idx {ref_idx}: {e}")
+                # logging.warning(f"findpulse_st_ed error at segment {seg_idx}, ref_idx {ref_idx}: {e}")
                 continue
 
             pulse_height = baseline - waveform_data[minp]
             if pulse_height < threshold:
-                logging.warning(f"Pulse min point below threshold at segment {seg_idx}, index {minp}")
+                # logging.warning(f"Pulse min point below threshold at segment {seg_idx}, index {minp}")
                 continue
             if ed < st:
-                logging.warning(f"Pulse start/end error at segment {seg_idx}: start={st}, end={ed}")
+                # logging.warning(f"Pulse start/end error at segment {seg_idx}: start={st}, end={ed}")
                 continue
 
             area = cal_area(waveform_data, st, ed, baseline)
