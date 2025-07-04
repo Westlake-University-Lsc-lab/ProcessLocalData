@@ -357,7 +357,7 @@ def afterpulse_scan_segments(
                 time_interval_start = st - main_pulse_info['start']
                 time_interval_min_point = minp - main_pulse_info['min_point']
                 
-                if (time_interval_start >= 50):
+                if (time_interval_start >= 30):
                     after_pulse_info = {
                         'segment': seg_idx,
                         'pulse_index': pulse_idx_in_segment,
