@@ -3,34 +3,33 @@ import numpy as np
 import daw_readout
 import time
 import os
-
+from scipy.ndimage import uniform_filter1d
 ##--------------------------------------------------
 '''
 old version of pulse finding algorithm
 '''
 ### read data and clculate start, min, end index ###
-def pulse_index(waveform_data):
-    ### find min index ###
-    min_index = 0
-    min_value = waveform_data[0]
-    for i in range(1, len(waveform_data)-1):
-        if waveform_data[i] < min_value:
-            min_value = waveform_data[i]
-            min_index = i
+def pulse_index(waveform_data, baseline, threshold=0.01, max_search_length=7):
+    # 平滑波形，减少噪声影响
+    smoothed_waveform = uniform_filter1d(waveform_data, size=5)
     
-    ### searching from min index position to left till back to baseline 
-    start_index = min_index
-    while start_index > 0 and (waveform_data[start_index] - waveform_data[start_index-1]) < 0  :
-        start_index -=1         
-     
-    ### searching form min index position to right till back to baseline
-    end_index = min_index
-    if (waveform_data[min_index] == waveform_data[min_index+1]):
-        end_index = min_index+1    
-    while end_index < len(waveform_data)-1 and (waveform_data[end_index] - waveform_data[end_index+1]) < 0  :
-        end_index +=1       
-        
-    return start_index, end_index,  min_index
+    mind_index = np.argmin(smoothed_waveform)
+    
+    # 向左搜索回到基线
+    start_index = mind_index
+    count = 0
+    while start_index > 0 and (smoothed_waveform[start_index] - baseline) < threshold and count < max_search_length:
+        start_index -= 1
+        count += 1
+    
+    # 向右搜索回到基线
+    end_index = mind_index
+    count = 0
+    while end_index < len(smoothed_waveform) - 1 and (smoothed_waveform[end_index] - baseline) < threshold and count < max_search_length:
+        end_index += 1
+        count += 1
+    
+    return start_index, end_index, mind_index
 
 def find_waveform_intersections(waveform, baseline, negative_pulse=True, percent=0.1):
     if negative_pulse:
@@ -236,7 +235,7 @@ def filter_points(points, min_interval):
             last_idx = idx
     return filtered
 
-def filter_after_pulses(df_after_pulse, min_interval=10):
+def filter_after_pulses(df_after_pulse, min_interval=3):
     """
     过滤 after_pulse DataFrame 中 start 时间点间隔小于 min_interval 的行。
     如果两个 start 时间点间隔小于 min_interval，则滤除后一个时间点对应的行。
@@ -249,14 +248,14 @@ def filter_after_pulses(df_after_pulse, min_interval=10):
         过滤后的 DataFrame。
     """
     # 先按 start 排序，确保顺序正确
-    df_sorted = df_after_pulse.sort_values('start').reset_index(drop=True)
+    df_sorted = df_after_pulse.sort_values('min_point').reset_index(drop=True)
     
     # 用一个布尔列表标记哪些行保留，初始都保留
     keep = [True] * len(df_sorted)
     
     for i in range(1, len(df_sorted)):
         # 计算当前start与前一个start的差值
-        diff = df_sorted.loc[i, 'start'] - df_sorted.loc[i-1, 'start']
+        diff = df_sorted.loc[i, 'min_point'] - df_sorted.loc[i-1, 'min_point']
         if diff < min_interval:
             # 间隔小于阈值，滤除当前行（i）
             keep[i] = False
@@ -319,7 +318,7 @@ def afterpulse_scan_segments(
 
         for ref_idx in ReferencePoints:
             try:
-                st, minp, ed = findpulse_st_ed(waveform_data, baseline, ref_idx)
+                st, minp, ed = pulse_index(waveform_data, baseline, 0.01, 7)
             except Exception as e:
                 logging.warning(f"findpulse_st_ed error at segment {seg_idx}, ref_idx {ref_idx}: {e}")
                 continue
@@ -340,6 +339,7 @@ def afterpulse_scan_segments(
                 main_pulse_info = {
                     'segment': seg_idx,
                     'pulse_index': 0,
+                    'baseline':baseline,
                     'start': st,
                     'width': ed - st,
                     'height': pulse_height,
@@ -357,11 +357,12 @@ def afterpulse_scan_segments(
                 time_interval_start = st - main_pulse_info['start']
                 time_interval_min_point = minp - main_pulse_info['min_point']
                 
-                if (time_interval_start >= 30):
+                if (time_interval_start >= 35):
                     after_pulse_info = {
                         'segment': seg_idx,
                         'pulse_index': pulse_idx_in_segment,
                         'start': st,
+                        'baseline':baseline,
                         'width': ed - st,
                         'height': pulse_height,
                         'min_point': minp,
@@ -378,12 +379,30 @@ def afterpulse_scan_segments(
         all_pulses.extend(after_pulses_in_segment)
         
         if not main_pulse_found:
-            logging.warning(f"Segment {seg_idx} 未找到主脉冲（height > {main_pulse_height_threshold}）")
+            # logging.warning(f"Segment {seg_idx} 未找到主脉冲（height > {main_pulse_height_threshold}）")
+            continue
 
     df = pd.DataFrame(all_pulses)
     return df
 ####-----------------------------------------
-
+def cal_app_charge_ratio(df_after_pulse):
+    """
+    遍历所有 segment，计算每个 segment 的 after pulse 概率 (app)，
+    返回一个列表，列表元素为字典，格式：{'segment': segment_id, 'app': app_value}
+    """
+    app_list = []
+    segments = df_after_pulse['segment'].unique()
+    total_main_pulses = []
+    afterpulse_total = []
+    for seg in segments:
+        df_seg = df_after_pulse[df_after_pulse['segment'] == seg]
+        after_pulses = df_seg.area[df_seg['pulse_index'] != 0].sum()
+        main_pulses = df_seg.area[df_seg['pulse_index'] == 0].values.sum()
+        afterpulse_total.append(after_pulses)
+        total_main_pulses.append(main_pulses)
+    app = sum(afterpulse_total) / sum(total_main_pulses)
+    print(app)
+    return app
 
 ###############################################################################
 def read_txt_to_dataframe(file_path: str, runtype: str = 'Decay'):
