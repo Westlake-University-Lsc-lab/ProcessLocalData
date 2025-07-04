@@ -20,7 +20,7 @@ def read_file_names(file_list_path):
 
 # process self trigger data
 def process_batch(file, runtype):
-    file_tag = runinfo.find_file_tag(file, runtype)        
+    file_tag = runinfo.find_file_tag(file)        
     winfo =[]        
     rawdata = daw_readout.DAWDemoWaveParser(file)      
     for wave in tqdm(rawdata):
@@ -48,21 +48,13 @@ def process_batch(file, runtype):
                 # 'STD':std,
                 'Area':area,
                 'Hight':hight,
-                # 'Width':width,   
                 # 'Asys':asys,             
-                # 'st':st,
-                # 'ed':ed,
-                # 'md':md, 
                 'WLen':wlen,
-                # 'RFHight' : rfhight,
-                # 'RFOvhight': rfovhight,
-                'RunType': runtype,               
-                'Ftag': file_tag,
                 'Wave': data,  
                 })
     file_tag = file_tag
     print(file_tag)
-    path_save = "outnpy/{}.h5py".format(file_tag)
+    path_save = "/mnt/data/outnpy/{}.h5py".format(file_tag)
     df = pd.DataFrame(winfo)
     process_data.write_to_hdf5(df, path_save)  
     print(path_save)

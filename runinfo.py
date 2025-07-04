@@ -58,9 +58,22 @@ def find_run_tag(s, runtype):
     run_tag = s.split('Hz_')[1].split('_run')[0]
     return run_tag
 
-def find_file_tag(s, runtype):
-    file_tag = s.split('/mnt/data/PMT/R8520_406/')[1].split('.bin')[0]
-    return file_tag
+# def find_file_tag(s, runtype):
+#     file_tag = s.split('/mnt/data/PMT/R8520_406/')[1].split('.bin')[0]
+#     return file_tag
+##----
+def find_file_tag(s):
+    prefixes = ['/mnt/data/PMT/R8520_406/', '/mnt/TPC/']
+    for prefix in prefixes:
+        if prefix in s:
+            try:
+                file_tag = s.split(prefix)[1].split('.bin')[0]
+                return file_tag
+            except IndexError:
+                # 如果格式不符合预期，返回None或抛异常
+                return None
+    return None
+###---
 
 def find_voltage(s, runtype):
     date = find_date(s)
