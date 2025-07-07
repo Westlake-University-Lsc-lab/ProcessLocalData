@@ -60,9 +60,9 @@ def pulse_area(
     baseline: 'int'
 ):
     sum = np.sum( waveform_data[st: ed])
-    area = baseline  * (ed - st) - sum  ### adc
-    return area
-    #return area*pe_fact
+    area = baseline  * (ed - st) - sum  ### 
+    # return area
+    return area*pe_fact
 
 ### calculate area of pulse with fixed width ###
 def pulse_area_fix_len(
@@ -191,7 +191,7 @@ def findpulse_st_ed(waveform_data: np.ndarray, baseline: int, referencePoint: in
     """
     
     start_range = max(0, referencePoint - 5)
-    end_range = min(len(waveform_data), referencePoint + 15)
+    end_range = min(len(waveform_data), referencePoint + 5)
 
     min_index = referencePoint
     min_value = waveform_data[referencePoint]
@@ -273,117 +273,124 @@ def filter_all_segments(df_after_pulse, min_interval=10):
     return result_df
 ####----------------------------------------------------------------
 
-def afterpulse_scan_segments(
-    segments_waveforms: list,
-    baselines: list,
+def afterpulse_scan_from_df(
+    df_main: pd.DataFrame,    
     threshold: int = 20,
-    main_pulse_height_threshold: int = 5000,
+    afterpulse_min_interval: int = 35,
 ):
     """
-    处理多个segment波形，识别每个segment的主脉冲和后脉冲。    
-    参数:
-        segments_waveforms: list of np.ndarray，每个元素为一个segment的波形数据
-        baselines: list of int，每个segment对应的基线电平
+    输入:
+        df_main: 包含主脉冲信息的DataFrame，必须包含Ch, TTT, Baseline, st, ed, md, Hight, Area, Wave等列
+        waveforms_dict: dict，key为TTT，value为对应波形np.ndarray
         threshold: 触发阈值
-        main_pulse_height_threshold: 主脉冲高度阈值
+        main_pulse_height_threshold: 主脉冲高度阈值（用于判断主脉冲，后脉冲不判断）
+        afterpulse_min_interval: 后脉冲起始点距离主脉冲结束点的最小间隔
     
     返回:
-        pd.DataFrame，包含所有segment的脉冲信息
+        pd.DataFrame，包含主脉冲和后脉冲信息
     """
+
     all_pulses = []
 
-    for seg_idx, (waveform_data, baseline) in enumerate(zip(segments_waveforms, baselines)):
-        ReferencePoints = []
+    for idx, row in df_main.iterrows():
+        Ch = row['Ch']
+        TTT = row['TTT']
+        baseline = row['Baseline']
+        st_main = row['st']
+        ed_main = row['ed']
+        minp_main = row['md']
+        height_main = row['Hight']
+        area_main = row['Area']
+        waveform = row['Wave']
+
+        # 先保存主脉冲信息
+        main_pulse_info = {
+            'Ch': Ch,
+            'TTT': TTT,
+            'segment': idx,
+            'pulse_index': 0,
+            'baseline': baseline,
+            'start': st_main,
+            'end': ed_main,
+            'width': ed_main - st_main,
+            'height': height_main,
+            'min_point': minp_main,
+            'area': area_main,
+            'is_main_pulse': True,
+            'time_interval_start': 0,
+            'time_interval_min_point': 0,
+        }
+        all_pulses.append(main_pulse_info)
+
+        # 获取对应波形
+        # waveform = waveforms_dict.get(TTT, None)
+        if waveform is None:
+            print(f"Warning: TTT {TTT} waveform not found, skip afterpulse search")
+            continue
+
+        n = len(waveform)
+        search_start = st_main + afterpulse_min_interval
+        if search_start >= n:
+            # 没有足够数据寻找后脉冲
+            continue
+
+        # 寻找后脉冲参考点：波形低于baseline - threshold的点
+        ref_points = []
         above_threshold = False
-        for i in range(len(waveform_data)):
-            if baseline - waveform_data[i] > threshold:
+        for i in range(search_start, n):
+            if baseline - waveform[i] > threshold:
                 if not above_threshold:
-                    ReferencePoints.append(i)
+                    ref_points.append(i)
                     above_threshold = True
             else:
                 above_threshold = False
 
-        if not ReferencePoints:
-            logging.info(f"Segment {seg_idx} 无过阈脉冲")
-            continue
-        
-        # 新增：过滤ReferencePoints，剔除相邻触发点间隔小于3的点
-        ReferencePoints = filter_points(ReferencePoints, 10)
-        
-        main_pulse_found = False
-        main_pulse_info = None
-        pulse_idx_in_segment = 0
-        
-        after_pulses_in_segment = []
+        # 过滤相邻参考点，避免重复计数
+        ref_points = filter_points(ref_points, 2)
+        # ReferencePoints = filter_points(ReferencePoints, 2)
 
-        for ref_idx in ReferencePoints:
+        pulse_idx_in_event = 1  # 后脉冲索引从1开始
+
+        for ref_idx in ref_points:
             try:
-                st, minp, ed = pulse_index(waveform_data, baseline, 0.01, 7)
+                st, minp, ed = findpulse_st_ed(waveform, baseline, ref_idx)
             except Exception as e:
-                # logging.warning(f"findpulse_st_ed error at segment {seg_idx}, ref_idx {ref_idx}: {e}")
+                # print(f"findpulse_st_ed error at TTT {TTT}, ref_idx {ref_idx}: {e}")
                 continue
 
-            pulse_height = baseline - waveform_data[minp]
-            if pulse_height < threshold:
-                # logging.warning(f"Pulse min point below threshold at segment {seg_idx}, index {minp}")
-                continue
             if ed < st:
-                # logging.warning(f"Pulse start/end error at segment {seg_idx}: start={st}, end={ed}")
                 continue
 
-            area = cal_area(waveform_data, st, ed, baseline)
+            pulse_height = baseline - waveform[minp]
+            if pulse_height < threshold:
+                continue
 
-            if (not main_pulse_found) and (pulse_height > main_pulse_height_threshold):
-                # 标记为主脉冲
-                main_pulse_found = True
-                main_pulse_info = {
-                    'segment': seg_idx,
-                    'pulse_index': 0,
-                    'baseline':baseline,
-                    'start': st,
-                    'width': ed - st,
-                    'height': pulse_height,
-                    'min_point': minp,
-                    'area': area,
-                }
-                all_pulses.append(main_pulse_info)
-                pulse_idx_in_segment = 1
-            else:
-                # 后脉冲，必须先找到主脉冲
-                if not main_pulse_found:
-                    # 如果还没找到主脉冲，跳过后脉冲
-                    continue
+            area = cal_area(waveform, st, ed, baseline)
 
-                time_interval_start = st - main_pulse_info['start']
-                time_interval_min_point = minp - main_pulse_info['min_point']
-                
-                if (time_interval_start >= 35):
-                    after_pulse_info = {
-                        'segment': seg_idx,
-                        'pulse_index': pulse_idx_in_segment,
-                        'start': st,
-                        'baseline':baseline,
-                        'width': ed - st,
-                        'height': pulse_height,
-                        'min_point': minp,
-                        'area': area,
-                        'time_interval_start': time_interval_start,
-                        'time_interval_min_point': time_interval_min_point,
-                    }                                                           
-                    after_pulses_in_segment.append(after_pulse_info)                                       
-                    pulse_idx_in_segment += 1
-                else:
-                    # logging.warning(f"Pulse too close to main pulse at segment {seg_idx}, index {minp}")
-                    continue
+            time_interval_start = st - st_main
+            time_interval_min_point = minp - minp_main
 
-        all_pulses.extend(after_pulses_in_segment)
-        
-        if not main_pulse_found:
-            # logging.warning(f"Segment {seg_idx} 未找到主脉冲（height > {main_pulse_height_threshold}）")
-            continue
+            after_pulse_info = {
+                'Ch': Ch,                
+                'TTT': TTT,
+                'segment': idx,                
+                'pulse_index': pulse_idx_in_event,
+                'baseline': baseline,
+                'start': st,
+                'end': ed,
+                'width': ed - st,
+                'height': pulse_height,
+                'min_point': minp,
+                'area': area,
+                'is_main_pulse': False,
+                'time_interval_start': time_interval_start,
+                'time_interval_min_point': time_interval_min_point,
+            }
+            all_pulses.append(after_pulse_info)
+            pulse_idx_in_event += 1
 
-    df = pd.DataFrame(all_pulses)
-    return df
+    df_all = pd.DataFrame(all_pulses)
+    return df_all
 ####-----------------------------------------
 def cal_app_charge_ratio(df_after_pulse):
     """
