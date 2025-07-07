@@ -29,13 +29,13 @@ def process_batch(file, runtype):
         base = wave.Baseline
         data = wave.Waveform  
         wlen = len(data)
-        std = np.std(data[:10])
+        # std = np.std(data[:10])
         # rms = np.sqrt(np.mean(np.square(data[:20])))
-        st,ed,md =process_data.pulse_index(data)      
+        st,ed,md =process_data.pulse_index(data, base, 0.01, 7)      
         area= process_data.pulse_area(data, st, ed, base)        
         # area= process_data.pulse_area(data, 110, 120, base)        
         hight = base - data[md]
-        # width = ed - st 
+        width = ed - st 
         # rfhight = base - np.min(data[md+3:md+20])
         # asys = (base - np.min(data))/(np.max(data) - np.min(data))
         # rfovhight = base - np.max(data[md:md+20])
@@ -48,6 +48,10 @@ def process_batch(file, runtype):
                 # 'STD':std,
                 'Area':area,
                 'Hight':hight,
+                'st':st,
+                'ed':ed,
+                'md':md,
+                'width':width,
                 # 'Asys':asys,             
                 'WLen':wlen,
                 'Wave': data,  
@@ -61,7 +65,6 @@ def process_batch(file, runtype):
     return   path_save
         
 
-        
 def main():
     try:
         parser = argparse.ArgumentParser(description='Process raw data to hdf5 format')
