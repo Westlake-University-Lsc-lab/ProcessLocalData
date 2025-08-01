@@ -63,7 +63,7 @@ def find_run_tag(s, runtype):
 #     return file_tag
 ##----
 def find_file_tag(s):
-    prefixes = ['/mnt/data/PMT/R8520_406/', '/mnt/TPC/']
+    prefixes = ['/mnt/data/PMT/R8520_406/', '/mnt/data/TPC/']
     for prefix in prefixes:
         if prefix in s:
             try:
