@@ -8,6 +8,13 @@ import argparse
 import numpy as np
 import pandas as pd
 
+import constant as c
+atten_9DB = c.attenuation_factor_9DB 
+atten_6DB = c.attenuation_factor_6DB 
+atten_12DB = c.attenuation_factor_12DB 
+atten_18DB = c.attenuation_factor_18DB 
+atten_20DB = c.attenuation_factor_20DB 
+
 
 
 def read_file_names(file_list_path):
@@ -28,16 +35,20 @@ def process_batch(file, runtype):
         ttt = wave.Timestamp
         base = wave.Baseline
         data = wave.Waveform  
-        wlen = len(data)
+        # wlen = len(data)
         # std = np.std(data[:10])
         # rms = np.sqrt(np.mean(np.square(data[:20])))
         st,ed,md =process_data.pulse_index(data, base, 0.01, 7)      
-        area= process_data.pulse_area(data, st, ed, base)        
-        # area= process_data.pulse_area(data, 110, 120, base)        
+        # area= process_data.pulse_area(data, st, ed, base)   
+        area= process_data.pulse_area(data, 75, 400, base) 
+        # if ch == 0 :
+            # area = area * atten_6DB
+        # elif ch == 1:    
+            # area= area * atten_6DB      
         hight = base - data[md]
         width = ed - st 
         # rfhight = base - np.min(data[md+3:md+20])
-        # asys = (base - np.min(data))/(np.max(data) - np.min(data))
+        asys = (base - np.min(data))/(np.max(data) - np.min(data))
         # rfovhight = base - np.max(data[md:md+20])
         if runtype == 'DarkRate':
             winfo.append({
@@ -53,7 +64,7 @@ def process_batch(file, runtype):
                 'md':md,
                 'width':width,
                 # 'Asys':asys,             
-                'WLen':wlen,
+                # 'WLen':wlen,
                 'Wave': data,  
                 })
     file_tag = file_tag
