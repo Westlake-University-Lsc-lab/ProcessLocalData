@@ -20,7 +20,7 @@ def read_file_names(file_list_path):
 
 # process self trigger data
 def process_batch(file, runtype):
-    file_tag = runinfo.find_file_tag(file, runtype)        
+    file_tag = runinfo.find_file_tag(file)        
     winfo =[]        
     rawdata = daw_readout.DAWDemoWaveParser(file)      
     for wave in tqdm(rawdata):
@@ -31,12 +31,13 @@ def process_batch(file, runtype):
         wlen = len(data)
         std = np.std(data[:10])
         # rms = np.sqrt(np.mean(np.square(data[:20])))
-        st,ed,md =process_data.pulse_index(data)      
-        # area= process_data.pulse_area(data, st, ed, base)        
-        area= process_data.pulse_area(data, 100, 125, base)        
+        st,ed,md =process_data.pulse_index(data,base, 0.01, 7)      
+        # area= process_data.pulse_area(data, st, ed, base)          
+        area= process_data.pulse_area(data, 110, 123, base)        
         hight = base - data[md]
         width = ed - st 
         # rfhight = base - np.min(data[md+3:md+20])
+        asys = (base - np.min(data))/(np.max(data) - np.min(data))
         rfovhight = base - np.max(data[md:md+20])
         if runtype == 'DarkRate':
             winfo.append({
@@ -47,7 +48,8 @@ def process_batch(file, runtype):
                 'STD':std,
                 'Area':area,
                 'Hight':hight,
-                'Width':width,                
+                'Width':width,   
+                'Asys':asys,             
                 'st':st,
                 'ed':ed,
                 'md':md, 
@@ -60,7 +62,7 @@ def process_batch(file, runtype):
                 })
     file_tag = file_tag
     print(file_tag)
-    path_save = "outnpy/{}.h5py".format(file_tag)
+    path_save = "/mnt/data/outnpy/{}.h5py".format(file_tag)
     df = pd.DataFrame(winfo)
     process_data.write_to_hdf5(df, path_save)  
     print(path_save)
