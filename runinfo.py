@@ -59,7 +59,7 @@ def find_run_tag(s, runtype):
     return run_tag
 
 def find_file_tag(s, runtype):
-    file_tag = s.split('/mnt/data/PMT/R8520_406/')[1].split('.bin')[0]
+    file_tag = s.split('/mnt/data/TPC')[1].split('.bin')[0]
     return file_tag
 
 def find_voltage(s, runtype):

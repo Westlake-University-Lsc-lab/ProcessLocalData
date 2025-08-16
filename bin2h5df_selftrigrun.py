@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 
 
-
 def read_file_names(file_list_path):
     flist = []
     with open(file_list_path, 'r') as file:
@@ -20,9 +19,9 @@ def read_file_names(file_list_path):
 
 # process self trigger data
 def process_batch(file, runtype):
-    file_tag = runinfo.find_file_tag(file, runtype)        
+    file_tag = runinfo.find_file_tag(file, runtype)       
     winfo =[]        
-    rawdata = daw_readout.DAWDemoWaveParser(file)      
+    rawdata = daw_readout.DAWDemoWaveParser(file)    
     for wave in tqdm(rawdata):
         ch = wave.Channel
         ttt = wave.Timestamp
@@ -32,8 +31,9 @@ def process_batch(file, runtype):
         std = np.std(data[:10])
         # rms = np.sqrt(np.mean(np.square(data[:20])))
         st,ed,md =process_data.pulse_index(data)      
-        # area= process_data.pulse_area(data, st, ed, base)        
-        area= process_data.pulse_area(data, 100, 125, base)        
+        area= process_data.pulse_area(data, st, ed, base)        
+        # area= process_data.pulse_area(data, 20, 40, base)  
+        baselinearea= process_data.pulse_area(data, 0, 50, base)        
         hight = base - data[md]
         width = ed - st 
         # rfhight = base - np.min(data[md+3:md+20])
@@ -47,7 +47,7 @@ def process_batch(file, runtype):
                 'STD':std,
                 'Area':area,
                 'Hight':hight,
-                'Width':width,                
+                'Width':width,
                 'st':st,
                 'ed':ed,
                 'md':md, 
@@ -56,7 +56,8 @@ def process_batch(file, runtype):
                 'RFOvhight': rfovhight,
                 'RunType': runtype,               
                 'Ftag': file_tag,
-                'Wave': data,  
+                'Wave': data, 
+                'BaselineArea': baselinearea
                 })
     file_tag = file_tag
     print(file_tag)
@@ -87,12 +88,13 @@ def main():
         trig_mode = runinfo.check_trigger_mode(runtype)
         flist = read_file_names(file_list)
         processed_list = [] 
-        for rawfilename in flist:                       
+        for rawfilename in flist:        
             if trig_mode == 'Self':
                 processed_list.append(process_batch(rawfilename, runtype))
             else:
                 print("Attention: Unknown trigger mode.")
                 sys.exit(1)
+            # print("Processed file: ", rawfilename)
         output_file = file_list + '_processed'
         with open(output_file, 'w') as file:
             for filename in processed_list:
