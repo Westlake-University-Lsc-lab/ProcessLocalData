@@ -48,7 +48,7 @@ def process_batch(file, runtype):
         hight = base - data[md]
         width = ed - st 
         # rfhight = base - np.min(data[md+3:md+20])
-        asys = (hight)/(np.max(data) - data[md])
+        asys = (base - np.min(data))/(np.max(data) - np.min(data))
         # rfovhight = base - np.max(data[md:md+20])
         if runtype == 'DarkRate':
             winfo.append({
