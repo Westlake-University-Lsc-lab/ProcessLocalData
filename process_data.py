@@ -9,12 +9,14 @@ from scipy.ndimage import uniform_filter1d
 old version of pulse finding algorithm
 '''
 ### read data and clculate start, min, end index ###
-def pulse_index(waveform_data, baseline, threshold=0.01, max_search_length=7):
+def pulse_index(waveform_data, baseline, std = 5, threshold=0.01, max_search_length=7):
+    mind_index = 0    
     # 平滑波形，减少噪声影响
     smoothed_waveform = uniform_filter1d(waveform_data, size=5)
-    
-    mind_index = np.argmin(smoothed_waveform)
-    
+    if std < 5:
+        mind_index = np.argmin(smoothed_waveform)
+    elif std > 5:
+        mind_index = np.argmin(smoothed_waveform)
     # 向左搜索回到基线
     start_index = mind_index
     count = 0
