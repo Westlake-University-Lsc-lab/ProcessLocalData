@@ -31,14 +31,14 @@ def process_batch(file, runtype):
         wlen = len(data)
         std = np.std(data[:10])
         # rms = np.sqrt(np.mean(np.square(data[:20])))
-        st,ed,md =process_data.pulse_index(data,base, 0.01, 7)      
-        # area= process_data.pulse_area(data, st, ed, base)          
-        area= process_data.pulse_area(data, 110, 123, base)        
+        st,ed,md =process_data.pulse_index(data,base, std, 0.01, 7)      
+        area= process_data.pulse_area(data, st, ed, base)          
+        # area= process_data.pulse_area(data, 110, 123, base)        
         hight = base - data[md]
         width = ed - st 
         # rfhight = base - np.min(data[md+3:md+20])
         asys = (base - np.min(data))/(np.max(data) - np.min(data))
-        rfovhight = base - np.max(data[md:md+20])
+        # rfovhight = base - np.max(data[md:md+20])
         if runtype == 'DarkRate':
             winfo.append({
                 'Ch':ch,
@@ -55,7 +55,7 @@ def process_batch(file, runtype):
                 'md':md, 
                 'WLen':wlen,
                 # 'RFHight' : rfhight,
-                'RFOvhight': rfovhight,
+                # 'RFOvhight': rfovhight,
                 'RunType': runtype,               
                 'Ftag': file_tag,
                 'Wave': data,  
