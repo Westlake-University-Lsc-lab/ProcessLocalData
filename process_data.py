@@ -16,7 +16,7 @@ def pulse_index(waveform_data, baseline, std = 5, threshold=0.01, max_search_len
     if std < 5:
         mind_index = np.argmin(smoothed_waveform)
     elif std > 5:
-        mind_index = np.argmin(smoothed_waveform)
+        mind_index = np.argmin(waveform_data)
     # 向左搜索回到基线
     start_index = mind_index
     count = 0
