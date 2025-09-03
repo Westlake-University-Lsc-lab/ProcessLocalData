@@ -83,7 +83,7 @@ def plot_waveform(mean_wf, std_wf, index, label_str):
     plt.xlabel('Sample Index[4ns]')
     plt.ylabel('Amplitude[ADC]')  
     
-def plot_waveform_from_df(df, index, st=0, ed=500, title_str='', save=False):
+def plot_waveform_from_df(df, index, st=0, ed=500, st_index=0, ed_index=500, title_str='', save=False):
     """plot waveform from dataframe
     parameter:
         df (pd.DataFrame): dataframe with waveform data.
@@ -96,7 +96,9 @@ def plot_waveform_from_df(df, index, st=0, ed=500, title_str='', save=False):
     baseline = df.Baseline[index]
     x = np.arange(len(waveform))
     plt.step(x, waveform, where='mid', label='data')
-    plt.axhline(y=baseline, color='b', linestyle='--', label='Baseline')  
+    plt.axhline(y=baseline, color='b', linestyle='--', label='Baseline')    
+    plt.axvline(x=st_index, color='r', linestyle='--', label='start')    
+    plt.axvline(x=ed_index, color='g', linestyle='--', label='end')    
     plt.xlabel('Time [4 ns]')
     plt.title(title_str)
     plt.legend()
@@ -150,7 +152,6 @@ def plot_PEns(f, index, DyOption=False ):
     plt.show()
     
 
-from matplotlib.colors import LinearSegmentedColormap
 
 def plot_2d_histogram(x_series, y_series, 
                      x_range=(0, 500), 
@@ -166,7 +167,8 @@ def plot_2d_histogram(x_series, y_series,
                      edgecolor='white',
                      return_data=False,
                      save_path=None,
-                     log_z=False):
+                     log_z=False,
+                     ):
     """
     绘制二维直方图（热力图）
 
@@ -208,6 +210,9 @@ def plot_2d_histogram(x_series, y_series,
     hist_data : tuple（当return_data=True时）
         (counts, x_edges, y_edges)
     """
+    
+    from matplotlib.colors import LinearSegmentedColormap
+    
     # 数据预处理
     df = pd.DataFrame({'x': x_series, 'y': y_series}).dropna()
     
@@ -261,9 +266,10 @@ def plot_2d_histogram(x_series, y_series,
     
     # 绘制热力图
     mesh = ax.pcolormesh(x_edges, y_edges, counts.T,
-                        cmap=cmap,
-                        edgecolor=edgecolor,
-                        linewidth=0.5)
+                         cmap=cmap,
+                         edgecolor=edgecolor,
+                         linewidth=0.5
+                         )
     
     # 添加颜色条
     cbar = fig.colorbar(mesh, ax=ax,  pad=0.02)
@@ -441,8 +447,53 @@ def plot_baseline_vs_ttt(df: pd.DataFrame):
     plt.xlabel('TTT(s)')
     plt.ylabel('Baseline(ADC)')
     plt.title('Baseline vs TTT (1uf)')
-    plt.ylim(15170,15350)
+    plt.ylim(14000,15500)
     plt.xlim(0,100)
     plt.grid(True)
     # plt.savefig('figs/baseline_vs_ttt_1uf.png')
     plt.show()
+
+
+import pandas as pd
+import numpy as np
+
+def calculate_ttt_difference(df):
+    """
+    计算 DataFrame 中 'TTT' 列的相邻行差值，并返回差值数组
+    
+    参数:
+    df (pd.DataFrame): 输入的 DataFrame，必须包含 'TTT' 列
+    
+    返回:
+    np.array: 包含所有 TTT 差值的一维数组
+    
+    异常处理:
+    - 如果输入不是 DataFrame
+    - 如果 DataFrame 中不存在 'TTT' 列
+    - 如果 DataFrame 为空或只有一行
+    """
+    # 检查输入是否为 DataFrame
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("输入参数必须是 pandas DataFrame")
+    
+    # 检查 'TTT' 列是否存在
+    if 'TTT' not in df.columns:
+        raise ValueError("DataFrame 中不存在列 'TTT'")
+    
+    # 检查 DataFrame 是否有足够的数据行
+    if len(df) < 2:
+        print("警告: DataFrame 行数不足，无法计算差值")
+        return np.array([])  # 返回空数组
+    
+    try:
+        # 计算相邻行的差值
+        delta_ttt = df['TTT'].diff().values
+        
+        # 移除第一个 NaN 值（因为第一行没有前一行可以计算差值）
+        delta_ttt = delta_ttt[1:]
+        
+        return delta_ttt
+        
+    except Exception as e:
+        print(f"计算差值时发生错误: {e}")
+        return np.array([])  # 出错时返回空数组

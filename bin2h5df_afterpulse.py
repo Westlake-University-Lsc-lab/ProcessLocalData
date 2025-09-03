@@ -36,9 +36,9 @@ def process_batch(file, runtype):
         base = wave.Baseline
         data = wave.Waveform  
         # wlen = len(data)
-        std = np.std(data[:10])
+        # std = np.std(data[:10])
         # rms = np.sqrt(np.mean(np.square(data[:20])))
-        st,ed,md =process_data.pulse_index(data, base, std, 0.01, 7)      
+        st,ed,md =process_data.pulse_index(data, base, 0.01, 7)      
         # area= process_data.pulse_area(data, st, ed, base)   
         area= process_data.pulse_area(data, 95, 105, base) 
         # if ch == 0 :
