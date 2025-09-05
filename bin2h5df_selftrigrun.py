@@ -35,9 +35,9 @@ def process_batch(file, runtype):
         area= process_data.pulse_area(data, st, ed, base)          
         # area= process_data.pulse_area(data, 110, 123, base)        
         hight = base - data[md]
+        ovshoot = np.max(data[md-5:md+5].astype(float), initial=-np.inf)   - base
         width = ed - st 
-        # rfhight = base - np.min(data[md+3:md+20])
-        asys = (base - np.min(data))/(np.max(data) - np.min(data))
+        asys = hight/(ovshoot+hight)
         # rfovhight = base - np.max(data[md:md+20])
         if runtype == 'DarkRate':
             winfo.append({

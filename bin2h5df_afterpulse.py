@@ -40,15 +40,15 @@ def process_batch(file, runtype):
         # rms = np.sqrt(np.mean(np.square(data[:20])))
         st,ed,md =process_data.pulse_index(data, base, 0.01, 7)      
         # area= process_data.pulse_area(data, st, ed, base)   
-        area= process_data.pulse_area(data, 95, 105, base) 
+        area= process_data.pulse_area(data, 100, 115, base) 
         # if ch == 0 :
             # area = area * atten_6DB
         # elif ch == 1:    
             # area= area * atten_6DB      
         hight = base - data[md]
+        ovshoot = np.max(data[md-5:md+5].astype(float), initial=-np.inf)   - base
         width = ed - st 
-        # rfhight = base - np.min(data[md+3:md+20])
-        asys = (base - np.min(data))/(np.max(data) - np.min(data))
+        asys = hight/(ovshoot+hight)
         # rfovhight = base - np.max(data[md:md+20])
         if runtype == 'DarkRate':
             winfo.append({
