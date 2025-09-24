@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import analysis_data
+import plot_tools as pt
 import sys
 def check_type(input_numb):
     try:
@@ -43,7 +44,8 @@ def fit_single_channel(df, channel, ftag):
         print("Please input a valid parameter type with interger value.")
         sys.exit()   
     area = df.Area[df.Ch == channel].astype(np.float64).to_numpy()
-    if channel == 4 :
+    
+    if channel == 2 :
         area = -area
         mean = np.mean(area)
         std = np.std(area)
@@ -72,10 +74,11 @@ def fit_single_channel(df, channel, ftag):
     #     pmt = 'LV2415'
     # elif channel == 2:
     #     pmt = 'LV2414 Dynode'
-    tile = r'{}'.format(channel)
-    s2_mu, s2_sigma =  analysis_data.plot_fit_histgram_vs_Gaussion(
+    title = 'channel{}'.format(channel)
+    # print('problems here ????')
+    s2_mu, s2_sigma =  pt.plot_fit_histgram_vs_Gaussion(
         area,nbins,ledge,redge,p0=[amp,mean,std],file_tag=ftag, 
-        xlabel=(r'Ch{}Area (PE)'.format(channel)),title=tile,Save=False)
+        xlabel=(r'Ch{}Area (PE)'.format(channel)),title=title)
     return s2_mu, s2_sigma
     
 
@@ -228,7 +231,7 @@ def four_gauss(x, A0, mu0, sigma0, A1, mu1, sigma1, A2, A3):
 # import matplotlib.pyplot as plt
 def three_gauss_fit(df, p0, bounds, case=False):
     count, bins, *_ = plt.hist(
-        df['Area'].values, bins=np.linspace(-10, 60, 100), 
+        df['Area'].values, bins=np.linspace(-20, 60, 100), 
         histtype='step', lw=1,
         label='Area'
     )
@@ -297,17 +300,17 @@ def plot_three_gauss_fit(df, params, params_covariance,  X, Y, ftag, fstring, sa
     print(f"R-squared: {r_squared:.2f}")
         
     textstr = '\n'.join([      
-        fr'$\mu_{{Ped}}$:   {mu0:.2f}±{perr[1]:.2f} ',
-        fr'$\sigma_{{Ped}}$:   {sigma0:.2f}±{perr[2]:.2f}',
-        fr'$\mu_{{SPE}}$:   {mu1:.2f}±{perr[4]:.2f}',
-        fr'$\sigma_{{SPE}}$:   {sigma1:.2f}±{perr[5]:.2f}',
+        fr'$\mu_{{0}}$:   {mu0:.2f}±{perr[1]:.2f} ',
+        fr'$\sigma_{{0}}$:   {sigma0:.2f}±{perr[2]:.2f}',
+        fr'$\mu_{{1}}$:   {mu1:.2f}±{perr[4]:.2f}',
+        fr'$\sigma_{{1}}$:   {sigma1:.2f}±{perr[5]:.2f}',
         # fr'$R^{2}$:     {r_squared:.2f}',
         fr'Res:    {res:.2f}±{res_err:.2f}',
         fr'Peak-Valley Ratio: {peak_valley_ratio:.2f}'  
 ])
     # plt.rcParams.update(cts.params)
     plt.figure(figsize=(8, 6))
-    plt.hist(df['Area'], bins=100, range=(-10, 60), histtype='step', color='black', alpha=0.8, label='Data')
+    plt.hist(df['Area'], bins=100, range=(-20, 60), histtype='step', color='black', alpha=0.8, label='Data')
     if case == False:
         plt.plot(X, four_gauss(X, *params), 'r-', label='')
     elif case == True:
@@ -321,9 +324,10 @@ def plot_three_gauss_fit(df, params, params_covariance,  X, Y, ftag, fstring, sa
 
     plt.ylim(1.E0, 1.E5)
 
-    plt.xlabel("Gain[$10^{6} e$]", labelpad=20, fontsize=20)
+    plt.xlabel("Gain [$10^{6}$]", labelpad=20, fontsize=20)
     plt.ylabel("Counts", labelpad=20, fontsize=20)
-    plt.xticks([0, 10, 20, 30, 40, 50, 60], ['0','10', '20', '30', '40', '50', '60'], fontsize=20)
+    plt.xticks([-10, 0, 10, 20, 30, 40, 50, 60], ['-10','0','10', '20', '30', '40', '50', '60'], fontsize=20)
+    # plt.xticks([-5, 0, 10, 20], ['-5','0','10', '20'], fontsize=20)
     
     plt.yticks(fontsize=20)
     plt.tick_params(which='both', direction='in', labelsize=20, pad=7, length=6,width=1.5,)
@@ -346,7 +350,135 @@ def plot_three_gauss_fit(df, params, params_covariance,  X, Y, ftag, fstring, sa
     # 保存图像
     if save_path:
         plt.savefig(r'figs/{}_{}_{}_{}.png'.format(ftag, 'SPE', fstring ,df['Ch'].values[0] ),  dpi=300, bbox_inches='tight')
-        plt.savefig(r'figs/{}_{}_{}_{}.pdf'.format(ftag, 'SPE', fstring ,df['Ch'].values[0] ),  dpi=300, bbox_inches='tight')
+        # plt.savefig(r'figs/{}_{}_{}_{}.pdf'.format(ftag, 'SPE', fstring ,df['Ch'].values[0] ),  dpi=300, bbox_inches='tight')
     plt.show()
 
 
+import numpy as np
+from scipy.optimize import curve_fit
+from scipy.stats import expon
+import matplotlib.pyplot as plt
+
+def exponential_decay(t, tau, A):
+    """
+    指数衰减函数
+    t: 时间间隔
+    tau: 衰减常数
+    A: 幅度参数
+    """
+    return A * np.exp(-t / tau)
+
+def fit_delta_t_distribution(delta_t, bins=50, plot=False):
+    """
+    拟合PMT暗计数时间间隔的指数分布
+    
+    参数:
+    delta_t: 时间间隔数据的一维数组
+    bins: 直方图分箱数
+    plot: 是否绘制拟合结果图表
+    
+    返回:
+    result: 包含拟合参数和统计信息的字典
+    """
+    # 数据预处理：移除NaN和无穷大值，确保数据为正
+    delta_t = np.array(delta_t)
+    delta_t = delta_t[np.isfinite(delta_t)]
+    delta_t = delta_t[delta_t > 0]
+    
+    if len(delta_t) == 0:
+        raise ValueError("输入数据中没有有效的时间间隔值")
+    
+    # 计算直方图
+    counts, bin_edges = np.histogram(delta_t, bins=bins, density=True)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+    
+    # 初始参数估计：使用数据的均值作为tau的初始估计
+    tau_guess = np.mean(delta_t)
+    A_guess = 1 / tau_guess  # 对于标准指数分布，幅度应为1/tau
+    
+    # 使用curve_fit进行拟合
+    try:
+        # 使用加权最小二乘法拟合，权重为计数的倒数（泊松统计）
+        sigma = np.sqrt(counts)
+        sigma[sigma == 0] = 1  # 避免除以零
+        popt, pcov = curve_fit(exponential_decay, bin_centers, counts, 
+                              p0=[tau_guess, A_guess], sigma=sigma, 
+                              absolute_sigma=True, maxfev=5000)
+        
+        tau_fit, A_fit = popt
+        tau_err, A_err = np.sqrt(np.diag(pcov))
+        
+        # 计算拟合优度
+        fitted_counts = exponential_decay(bin_centers, tau_fit, A_fit)
+        chi_sq = np.sum(((counts - fitted_counts) ** 2) / sigma ** 2)
+        dof = len(counts) - 2  # 自由度 = 数据点数 - 参数个数
+        reduced_chi_sq = chi_sq / dof
+        
+        # 计算R-squared
+        ss_res = np.sum((counts - fitted_counts) ** 2)
+        ss_tot = np.sum((counts - np.mean(counts)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        
+        # 使用最大似然估计作为比较
+        tau_mle = np.mean(delta_t)
+        
+        # 准备结果字典
+        result = {
+            'tau': tau_fit,
+            'tau_error': tau_err,
+            'A': A_fit,
+            'A_error': A_err,
+            'chi_squared': chi_sq,
+            'reduced_chi_squared': reduced_chi_sq,
+            'r_squared': r_squared,
+            'tau_mle': tau_mle,
+            'covariance_matrix': pcov,
+            'fitted_function': lambda t: exponential_decay(t, tau_fit, A_fit)
+        }
+        
+        # 如果需要绘制图表
+        if plot:
+            plt.figure(figsize=(10, 6))
+            plt.bar(bin_edges[:-1], counts, width=np.diff(bin_edges), 
+                   alpha=0.7, label='数据', edgecolor='black', linewidth=0.5)
+            
+            t_fit = np.linspace(0, np.max(delta_t), 1000)
+            plt.plot(t_fit, exponential_decay(t_fit, tau_fit, A_fit), 
+                    'r-', linewidth=2, label=f'拟合: τ = {tau_fit:.3f} ± {tau_err:.3f}')
+            
+            plt.xlabel('时间间隔 Δt')
+            plt.ylabel('概率密度')
+            plt.title('PMT暗计数时间间隔分布拟合')
+            plt.legend()
+            plt.grid(True, alpha=0.3)
+            plt.yscale('log')  # 使用对数坐标更好地显示指数衰减
+            plt.show()
+            
+        return result
+        
+    except Exception as e:
+        print(f"拟合过程中出现错误: {e}")
+        return None
+
+# 示例使用
+if __name__ == "__main__":
+    # 生成模拟数据（实际应用中应使用真实数据）
+    np.random.seed(42)
+    true_tau = 10.0  # 真实衰减常数
+    n_events = 10000  # 事件数量
+    
+    # 从指数分布生成随机数据
+    delta_t_simulated = np.random.exponential(true_tau, n_events)
+    
+    # 拟合数据
+    result = fit_delta_t_distribution(delta_t_simulated, bins=50, plot=True)
+    
+    # 打印结果
+    if result:
+        print("拟合结果:")
+        print(f"衰减常数 τ = {result['tau']:.3f} ± {result['tau_error']:.3f}")
+        print(f"幅度参数 A = {result['A']:.3f} ± {result['A_error']:.3f}")
+        print(f"卡方值 = {result['chi_squared']:.3f}")
+        print(f"约化卡方 = {result['reduced_chi_squared']:.3f}")
+        print(f"R² = {result['r_squared']:.3f}")
+        print(f"最大似然估计 τ = {result['tau_mle']:.3f}")
