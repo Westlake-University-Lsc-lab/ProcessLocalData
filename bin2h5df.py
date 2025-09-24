@@ -109,7 +109,7 @@ def process(rawfilename, runtype):
         })
     file_tag = run_info['file_tag']
     print(file_tag)
-    path_save = "outnpy/{}.h5py".format(file_tag)
+    path_save = "/mnt/data/outnpy/{}.h5py".format(file_tag)
     df = pd.DataFrame(winfo)
     process_data.write_to_hdf5(df, path_save)  
     print(path_save)
@@ -173,7 +173,7 @@ def process_batch(file, runtype):
             })
     file_tag = run_info['file_tag']
     print(file_tag)
-    path_save = "outnpy/{}.h5py".format(file_tag)
+    path_save = "/mnt/data/outnpy/{}.h5py".format(file_tag)
     df = pd.DataFrame(winfo)
     process_data.write_to_hdf5(df, path_save)  
     print(path_save)
@@ -196,13 +196,16 @@ def main():
         file_list = args.file_list
         print("Arguments parsed successfully.")
         trig_mode = runinfo.check_trigger_mode(runtype)
+        print("Trigger mode: ", trig_mode)
         flist = read_file_names(file_list)
         processed_list = [] 
         for rawfilename in flist:    
             if trig_mode == 'External':    
                 processed_file = process(rawfilename, runtype)
+                # print(processed_file)
                 processed_list.append(processed_file)            
             elif trig_mode == 'Self':
+                print("Self trigger mode, processing file: ", rawfilename)
                 processed_list.append(process_batch(rawfilename, runtype))
             else:
                 print("Attention: Unknown trigger mode.")
