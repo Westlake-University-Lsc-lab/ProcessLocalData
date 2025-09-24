@@ -29,6 +29,72 @@ def merge_files(flist):
     return all_data
 
 
+def find_pulse_width(waveform: np.ndarray, baseline: float, frac: float = 0.5, polarity: str = "positive"):
+    """
+    计算波形起始点、峰值点、下降沿 frac*高度对应点，并返回时间宽度
+    不依赖 dt，结果以 sample index 为单位
+
+    参数:
+        waveform: np.ndarray, 波形
+        baseline: float, 基线值
+        frac: float, 阈值比例 (0.5=50%, 0.9=90%)
+        polarity: "positive" 或 "negative"
+
+    返回:
+        start_idx: 起始点索引 (含插值)
+        peak_idx: 峰值索引
+        frac_idx: 下降沿 frac crossing 索引 (含插值)
+        width: 宽度 (frac_idx - start_idx)
+    """
+
+    n = len(waveform)
+    wf = waveform.copy()
+
+    # 峰值
+    if polarity == "positive":
+        peak_idx = np.argmax(wf)
+    else:
+        peak_idx = np.argmin(wf)
+    peak_val = wf[peak_idx]
+
+    # 起始点：从 baseline 到 10%高度
+    target_start = baseline + 0.1 * (peak_val - baseline)
+    if polarity == "positive":
+        candidates = np.where(wf[:peak_idx] >= target_start)[0]
+    else:
+        candidates = np.where(wf[:peak_idx] <= target_start)[0]
+
+    if len(candidates) == 0:
+        start_idx = 0
+    else:
+        i1 = candidates[0]
+        i0 = i1 - 1 if i1 > 0 else i1
+        # 线性插值
+        x0, y0 = i0, wf[i0]
+        x1, y1 = i1, wf[i1]
+        start_idx = x0 + (target_start - y0) / (y1 - y0) * (x1 - x0)
+
+    # 下降沿 frac
+    target_frac = baseline + frac * (peak_val - baseline)
+    if polarity == "positive":
+        desc = np.where(wf[peak_idx:] <= target_frac)[0]
+    else:
+        desc = np.where(wf[peak_idx:] >= target_frac)[0]
+
+    if len(desc) == 0:
+        frac_idx = n - 1
+    else:
+        j1 = peak_idx + desc[0]
+        j0 = j1 - 1 if j1 > peak_idx else j1
+        # 插值
+        x0, y0 = j0, wf[j0]
+        x1, y1 = j1, wf[j1]
+        frac_idx = x0 + (target_frac - y0) / (y1 - y0) * (x1 - x0)
+
+    width = frac_idx - start_idx
+    return start_idx, peak_idx, frac_idx, width
+
+
 def Area_ratio(df):
     area_ratio = []
     area_ratio_err = []
@@ -54,48 +120,8 @@ def Area_ratio(df):
         print(ratio*100, ratio_err*100)
     return area_ratio, area_ratio_err
 
-def plot_waveform(wave, baseline,  xmin=0, xmax=150, ttt=888, area=100, pmt='LV2414',  ch='Anode', Save=False, file_tag='20240830_LED_run', title='LED Ch0 Waveform'):
-    plt.figure()
-    plt.step(np.arange(len(wave)), wave, where='mid')
-    plt.axhline(y=baseline, color='b', linestyle='--', label='Baseline')  # 基线
-    plt.axvline(x=100, color='r', linestyle='--', label='intg_st')  # 阈值
-    plt.axvline(x=370, color='g', linestyle='--', label='intg_ed')  # 阈值
-    # plt.axvline(x=400, color='r', linestyle='--', label='')  # 阈值
-    # plt.axhline(y=baseline -20, color='r', linestyle='--', label='Threshold')  # 阈值
-    # plt.scatter(st, wave[st], color='r', marker='o', label='start')  # 起始点
-    # plt.scatter(ed, wave[ed], color='g', marker='o', label='end')  # 结束点
-    # plt.scatter(lp, wave[lp], color='b', marker='o', label='minpoint')  # 最低点
-    plt.title(r'Waveform of PMT {} {}, TTT={}, {:.2f}PE'.format(pmt,ch, ttt, area))
-    plt.xlabel('Time [4 ns]')
-    plt.ylabel('ADC Count')
-    plt.legend()
-    plt.xlim(xmin, xmax)
-    if Save==True:
-        plt.savefig(r'./figs/{}_{}.png'.format(file_tag, title,dpi=300))
-    elif Save==False:
-        plt.show()
-    # plt.show()
+
     
-def plot_fit_histgram_vs_Gaussion(array, nbins, left_edge, right_edge, p0=[1.e4, 100, 10],file_tag='20240830_LED_run',xlabel='Ch0 Area', title='LED Ch0 Area', Save=False):
-    hist, bins_edges = np.histogram(array, bins= nbins, range=(left_edge, right_edge))
-    bins = (bins_edges[:-1] + bins_edges[1:])/2
-    popt, _ = curve_fit(fit_package.gaussian, bins, hist, p0=p0)
-    x_fit = np.linspace(np.min(bins), np.max(bins), 1000)
-    y_fit = fit_package.gaussian(x_fit, *popt)
-    plt.plot(x_fit, y_fit, color='red', label=r'$\mu$={:.2f}, $\sigma$={:.2f}'.format(popt[1], popt[2]))
-    plt.hist(array, bins=nbins, range=(left_edge, right_edge),  color='black', density=False, alpha=0.5, label=title)
-    plt.xlabel(r'{} '.format(xlabel))
-    plt.ylabel('Entries')
-    plt.title(r'{} {}'.format(file_tag, title))
-    plt.legend()
-    if Save==True:
-        plt.savefig(r'./figs/{}_{}.png'.format(file_tag, title,dpi=300))
-    elif Save==False:
-        plt.show()
-    print(r'Fit: mu= {:.2f}, sigma ={:.2f}'.format(popt[1], popt[2]))
-    return popt[1], popt[2]
-
-
 def landau_distribution(xdata, mu,sigma, A):
     landau = lambda t, mu, sigma, xdata, A : A*np.exp(-t)*np.cos(t*(xdata -mu)/sigma + 2*t/np.pi *np.log(t/sigma) ) / (sigma *  np.pi)
     integral, error = integrate.quad(landau, 0, np.inf, args=(mu,sigma,xdata, A))
