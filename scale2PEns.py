@@ -12,12 +12,12 @@ GR_err = constant.GR_err
     
 def scale_S1_to_PEns(file, runtype='Saturation'):
     df = pd.read_hdf(file, key='winfo')
-    PEns_filter = (df.Ch1_mu * Rft)/df.S1_width
-    PEns_filter_err = (df.Ch1_mu * Rft)/df.S1_width * np.sqrt( (df.Ch1_sigma/df.Ch1_mu )**2 + (Rft_err/Rft)**2 + (1/df.S1_width)**2)
-    PEns_dynode = (df.Ch2_mu * GR_mu) /df.S1_width
-    PEns_dynode_err = (df.Ch2_mu * GR_mu )/df.S1_width * np.sqrt((df.Ch2_sigma/df.Ch2_mu)**2 + (GR_err/GR_mu)**2  + (1/df.S1_width)**2)
-    PEns_anode = df.Ch0_mu /df.S1_width
-    PEns_anode_err = df.Ch0_mu /df.S1_width * np.sqrt((df.Ch0_sigma/df.Ch0_mu) **2  + (1/df.S1_width)**2)
+    PEns_filter = (df.ch1_mu * Rft)/df.S1_width
+    PEns_filter_err = (df.ch1_mu * Rft)/df.S1_width * np.sqrt( (df.ch1_sigma/df.ch1_mu )**2 + (Rft_err/Rft)**2 + (1/df.S1_width)**2)
+    PEns_dynode = (df.ch2_mu * GR_mu) /df.S1_width
+    PEns_dynode_err = (df.ch2_mu * GR_mu )/df.S1_width * np.sqrt((df.ch2_sigma/df.ch2_mu)**2 + (GR_err/GR_mu)**2  + (1/df.S1_width)**2)
+    PEns_anode = df.ch0_mu /df.S1_width
+    PEns_anode_err = df.ch0_mu /df.S1_width * np.sqrt((df.ch0_sigma/df.ch0_mu) **2  + (1/df.S1_width)**2)
     df['PEns_filter'] = PEns_filter
     df['PEns_filter_err'] = PEns_filter_err
     df['PEns_dynode'] = PEns_dynode
