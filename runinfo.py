@@ -14,9 +14,11 @@ def determine_runtype(run_file):
         runtype = 'DarkRate'
     elif 'self' in run_file:
         runtype = 'DarkRate'
+    elif 'anode_20dB' in run_file:
+        runtype = 'LED_TEST'
     else:
         runtype = 'others'
-    print(runtype)
+    # print(runtype)
     return runtype
 
 def find_date(s):
@@ -63,11 +65,11 @@ def find_run_tag(s, runtype):
 #     return file_tag
 ##----
 def find_file_tag(s):
-    prefixes = ['/mnt/data/PMT/R8520_406/', '/mnt/data/TPC/']
+    prefixes = ['/mnt/data/PMT/R8520_406/', '/mnt/data/TPC/', '/mnt/data/outnpy/']
     for prefix in prefixes:
         if prefix in s:
             try:
-                file_tag = s.split(prefix)[1].split('.bin')[0]
+                file_tag = s.split(prefix)[1].split('.')[0]
                 return file_tag
             except IndexError:
                 # 如果格式不符合预期，返回None或抛异常
@@ -108,6 +110,13 @@ def find_voltage(s, runtype):
                 voltage_part = s[voltage:shifted_voltage]
                 voltage_value = float(voltage_part.replace('p', '.').replace('v', ''))
                 return voltage_value
+    elif runtype == 'LED_TEST':
+        st = s.find('_0dB_') +  5
+        ed = s.find('_0dB_') + 9
+        if st != -1 and ed != -1:  
+            voltage_part = s[st:ed]
+            voltage_value = float(voltage_part.replace('p', '.').replace('v', ''))
+            return voltage_value
     else:
         voltage = None
         return voltage
@@ -125,6 +134,8 @@ def check_trigger_mode(runtype):
         trigger_mode = 'Self'
     elif runtype == 'DarkRate':
         trigger_mode = 'Self'
+    elif runtype == 'LED_TEST':
+        trigger_mode = 'External'
     else:
         trigger_mode = 'Unknown'
     return trigger_mode
@@ -134,7 +145,7 @@ def parse_run_info(rawfilename, runtype):
     # runtype = determine_runtype(rawfilename)
     run_info = []
     date = find_date(rawfilename)
-    file_tag = find_file_tag(rawfilename, runtype)
+    file_tag = find_file_tag(rawfilename)
     if runtype != 'DarkRate':
         volate = find_voltage(rawfilename, runtype)
         delta_t =  find_deta_t(rawfilename, runtype)
@@ -154,4 +165,18 @@ def parse_run_info(rawfilename, runtype):
             'file_tag': file_tag
         }]
     return run_info
- 
+
+def is_board1(file_name: str) -> bool:
+    '''
+    判断 file_name 是否属于 board 1.
+    如果包含 "_b0_" → 返回 False
+    如果包含 "_b1_" → 返回 True
+    其他情况 → 抛出 ValueError
+    '''
+    if "_b0_" in file_name:
+        return False
+    elif "_b1_" in file_name:
+        return True
+    else:
+        raise ValueError(f"无法识别 board id, 文件名: {file_name}")
+
