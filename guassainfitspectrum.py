@@ -15,23 +15,23 @@ def fit_spectrum(flist):
             df = pd.read_hdf(file, key='winfo')                
             ch0_mu,ch0_sigma = fit_package.fit_single_channel(df, 0, f_tag)               
             ch1_mu,ch1_sigma = fit_package.fit_single_channel(df, 1, f_tag)
-            ch4_mu,ch4_sigma = fit_package.fit_single_channel(df, 4, f_tag)
-            ch5_mu,ch5_sigma = fit_package.fit_single_channel(df, 5, f_tag)
+            ch2_mu,ch2_sigma = fit_package.fit_single_channel(df, 2, f_tag)
+            # ch5_mu,ch5_sigma = fit_package.fit_single_channel(df, 5, f_tag)
             run_info.append({               
-                # 'S2_width': df.S2_width.values[0],
-                # 'S1_width': df.S1_width.values[0],
-                # 'Delta_t': df.Delta_t.values[0],
-                # 'Voltage': df.Voltage.values[0],
-                # 'RunTag': df.RunTag.values[0],
+                'S2_width': df.S2_width.values[0],
+                'S1_width': df.S1_width.values[0],
+                'Delta_t': df.Delta_t.values[0],
+                'Voltage': df.Voltage.values[0],
+                'RunTag': df.RunTag.values[0],
                 'ftag': f_tag,   
                 'ch0_mu': ch0_mu,
                 'ch1_mu': ch1_mu,
-                'ch4_mu': ch4_mu,
-                'ch5_mu': ch5_mu,
+                'ch2_mu': ch2_mu,
+                # 'ch5_mu': ch5_mu,
                 'ch0_sigma' : ch0_sigma,
                 'ch1_sigma' : ch1_sigma,
-                'ch4_sigma' : ch4_sigma,         
-                'ch5_sigma' : ch5_sigma,         
+                'ch2_sigma' : ch2_sigma,         
+                # 'ch5_sigma' : ch5_sigma,         
             })        
     return run_info, f_tag
 
@@ -50,7 +50,7 @@ def main():
         file_list = args.file_list
         run_info, f_tag = fit_spectrum(file_list)        
         df_new = pd.DataFrame(run_info)
-        path = r'outnpy/{}_single_gussain.h5py'.format(f_tag)
+        path = r'/mnt/data/outnpy/{}_single_gussain.h5py'.format(f_tag)
         process_data.write_to_hdf5(df_new, path)
     
     except Exception as e:
