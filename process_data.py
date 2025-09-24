@@ -4,19 +4,20 @@ import daw_readout
 import time
 import os
 from scipy.ndimage import uniform_filter1d
+from scipy.signal import firwin, lfilter
+
 ##--------------------------------------------------
 '''
 old version of pulse finding algorithm
 '''
 ### read data and clculate start, min, end index ###
-def pulse_index(waveform_data, baseline, std = 5, threshold=0.01, max_search_length=7):
-    mind_index = 0    
+def pulse_index(waveform_data, baseline,  threshold=0.01, max_search_length=7):
     # 平滑波形，减少噪声影响
     smoothed_waveform = uniform_filter1d(waveform_data, size=5)
-    if std < 5:
-        mind_index = np.argmin(smoothed_waveform)
-    elif std > 5:
-        mind_index = np.argmin(waveform_data)
+    # if std < 5:
+        # mind_index = np.argmin(smoothed_waveform)
+    # elif std > 5:
+    mind_index = np.argmin(waveform_data)
     # 向左搜索回到基线
     start_index = mind_index
     count = 0
@@ -788,3 +789,31 @@ def selection_main_pulse(df):
         })
     result =pd.DataFrame(output)
     return result
+
+
+def lowpass_filter(signal: np.ndarray, fs: float = 250e6, cutoff: float = 20e6, numtaps: int = 10) -> np.ndarray:
+    '''
+    对输入信号应用低通FIR滤波器
+    
+    参数
+    ----
+    signal : np.ndarray
+        输入波形
+    fs : float, default=250e6
+        采样频率 (Hz)，默认 250 MHz
+    cutoff : float, default=20e6
+        截止频率 (Hz)，默认 20 MHz
+    numtaps : int, default=101
+        FIR滤波器阶数 + 1（滤波器长度），越大滤波效果越好但计算更慢
+    
+    返回
+    ----
+    np.ndarray
+        滤波后的波形
+    '''
+    # 设计低通FIR滤波器
+    taps = firwin(numtaps, cutoff, fs=fs, pass_zero="lowpass")
+    # 应用滤波器
+    filtered = lfilter(taps, 1.0, signal)
+    return filtered
+
