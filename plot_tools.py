@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+import fit_package 
 from matplotlib import cm
 cmap = plt.cm.rainbow(np.linspace(0, 1, 9))
 
@@ -83,7 +85,7 @@ def plot_waveform(mean_wf, std_wf, index, label_str):
     plt.xlabel('Sample Index[4ns]')
     plt.ylabel('Amplitude[ADC]')  
     
-def plot_waveform_from_df(df, index, st=0, ed=500, st_index=0, ed_index=500, title_str='', save=False):
+def plot_waveform_from_df(df, index, st=0, ed=500, title_str='', save=False):
     """plot waveform from dataframe
     parameter:
         df (pd.DataFrame): dataframe with waveform data.
@@ -97,15 +99,38 @@ def plot_waveform_from_df(df, index, st=0, ed=500, st_index=0, ed_index=500, tit
     x = np.arange(len(waveform))
     plt.step(x, waveform, where='mid', label='data')
     plt.axhline(y=baseline, color='b', linestyle='--', label='Baseline')    
-    plt.axvline(x=st_index, color='r', linestyle='--', label='start')    
-    plt.axvline(x=ed_index, color='g', linestyle='--', label='end')    
+    # plt.axvline(x=df.st[index], color='r', linestyle='--', label='start')    
+    # plt.axvline(x=df.ed[index], color='g', linestyle='--', label='end')    
+    # plt.axvline(x=df.md[index], color='grey', linestyle='--', label='peak')    
     plt.xlabel('Time [4 ns]')
     plt.title(title_str)
     plt.legend()
     if save:
         plt.savefig(r'figs/{}_example_wf.png'.format(title_str))       
     plt.show()    
-
+    
+# def plot_waveform(wave, baseline,  xmin=0, xmax=150, ttt=888, area=100, pmt='LV2414',  ch='Anode', Save=False, file_tag='20240830_LED_run', title='LED Ch0 Waveform'):
+#     plt.figure()
+#     plt.step(np.arange(len(wave)), wave, where='mid')
+#     plt.axhline(y=baseline, color='b', linestyle='--', label='Baseline')  # 基线
+#     plt.axvline(x=100, color='r', linestyle='--', label='intg_st')  # 阈值
+#     plt.axvline(x=370, color='g', linestyle='--', label='intg_ed')  # 阈值
+#     # plt.axvline(x=400, color='r', linestyle='--', label='')  # 阈值
+#     # plt.axhline(y=baseline -20, color='r', linestyle='--', label='Threshold')  # 阈值
+#     # plt.scatter(st, wave[st], color='r', marker='o', label='start')  # 起始点
+#     # plt.scatter(ed, wave[ed], color='g', marker='o', label='end')  # 结束点
+#     # plt.scatter(lp, wave[lp], color='b', marker='o', label='minpoint')  # 最低点
+#     plt.title(r'Waveform of PMT {} {}, TTT={}, {:.2f}PE'.format(pmt,ch, ttt, area))
+#     plt.xlabel('Time [4 ns]')
+#     plt.ylabel('ADC Count')
+#     plt.legend()
+#     plt.xlim(xmin, xmax)
+#     if Save==True:
+#         plt.savefig(r'./figs/{}_{}.png'.format(file_tag, title,dpi=300))
+#     elif Save==False:
+#         plt.show()
+#     # plt.show()
+    
 def plot_example_waveform(df,st=0,ed=500):    
     index = None 
     for i in range(3):
@@ -128,7 +153,32 @@ def plot_example_waveform(df,st=0,ed=500):
     elif channel == 2:
         pmt = 'LV2414 Dynode'
     analysis_data.plot_waveform(wave,baseline,st,ed,pmt=pmt,ch=r'Ch={}'.format(channel),ttt=ttt,area=area)
+
+def plot_fit_histgram_vs_Gaussion(array, nbins, left_edge, right_edge, p0=[1.e4, 100, 10],file_tag='20240830_LED_run',xlabel='Ch0 Area', title='LED Ch0 Area', Save=False):
+    fig = plt.figure()
+    hist, bins_edges = np.histogram(array, bins= nbins, range=(left_edge, right_edge))
+    bins = (bins_edges[:-1] + bins_edges[1:])/2
+    popt, _ = curve_fit(fit_package.gaussian, bins, hist, p0=p0)
     
+    x_fit = np.linspace(np.min(bins), np.max(bins), 1000)
+    y_fit = fit_package.gaussian(x_fit, *popt)
+    plt.plot(x_fit, y_fit, color='red', label=r'$\mu$={:.2f}, $\sigma$={:.2f}'.format(popt[1], popt[2]))
+    plt.hist(array, bins=nbins, range=(left_edge, right_edge),  color='black', density=False, alpha=0.5, label=title)
+    plt.xlabel(r'{} '.format(xlabel))
+    plt.ylabel('Entries')
+    plt.title(r'{} {}'.format(file_tag, title))
+    plt.legend()
+    if Save==True:
+        plt.savefig(r'./figs/{}_{}.png'.format(file_tag, title,dpi=300))
+        plt.close(fig)
+    elif Save==False:
+        plt.show(block=False)
+        plt.pause(2)
+        plt.close(fig)   
+    
+    print(r'Fit: mu= {:.2f}, sigma ={:.2f}'.format(popt[1], popt[2]))
+    return popt[1], popt[2]
+
     
 def plot_PEns(f, index, DyOption=False ):
     df = pd.read_hdf(f, key='winfo')
