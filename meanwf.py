@@ -66,12 +66,15 @@ def main():
                 if wf_type == 'anode':
                     start, peak, t50, w50 = ad.find_pulse_width(wf_mean_filtered[10:], baseline=baseline, frac=0.5, polarity="negative")
                     _, _, t80, w80 = ad.find_pulse_width(wf_mean_filtered[10:], baseline=baseline, frac=0.8, polarity="negative")
+                    _, _, t90, w90 = ad.find_pulse_width(wf_mean_filtered[10:], baseline=baseline, frac=0.9, polarity="negative")
                 elif wf_type == 'dynode':
                     start, peak, t50, w50 = ad.find_pulse_width(wf_mean_filtered[10:], baseline=baseline, frac=0.5, polarity="positive")
                     _, _, t80, w80 = ad.find_pulse_width(wf_mean_filtered[10:], baseline=baseline, frac=0.8, polarity="positive")
+                    _, _, t90, w90 = ad.find_pulse_width(wf_mean_filtered[10:], baseline=baseline, frac=0.9, polarity="positive")
                 
                 print(f"t50: {t50}, w50: {w50}")
-                print(f"t50: {t80}, w50: {w80}")
+                print(f"t80: {t80}, w80: {w80}")
+                print(f"t90: {t90}, w90: {w90}")
                 print('--------------------')
                 # 填充信息字典
                 # 将所有数值保留两位小数
@@ -91,6 +94,8 @@ def main():
                     'w50': w50*4E-3,
                     't80': t80,
                     'w80': w80*4E-3,
+                    't90': t90,
+                    'w90': w90*4E-3,
                     'wf_filtered': wf_mean_filtered,
                     'wf_mean': wf_mean,
                     'wf_err': wf_err,                      
