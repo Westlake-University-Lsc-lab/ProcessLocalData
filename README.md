@@ -40,4 +40,13 @@ python sacle2PEns.py --runtype {' Saturation or TimeConstant'} --file {'outnpy/*
 
 ```
 python CalR2ref.py --file  {'outnpy/*single_gussain_TimeConstant_scaled.h5py'}
+
+```
+
+#### calculate the waveform duration of  50% reduce from the height,
+#### using mean waveform and low-pass filter algorithm
+
+```
+python meanwf.py  --wftype anode --file_list  runlist/r_anode_processed
+
 ```
